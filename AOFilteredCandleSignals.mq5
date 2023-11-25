@@ -102,8 +102,6 @@ void findEngulfing()
   {
    if(showEngulfing)
      {
-      double barRatio = 10;
-
       double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
       double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
       double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
@@ -111,13 +109,13 @@ void findEngulfing()
 
       double bullishSpread = open2 - close2;
       if(inDownTrend(3) &&
-         open2 > close2 && close1 > open2 + bullishSpread / barRatio && open1 < close2 - bullishSpread / barRatio)
+         open2 > close2 && close1 > open2 + bullishSpread && open1 < close2 - bullishSpread)
         {
          Alert("bulish engulfing");
         }
       double bearishSpread = close2 - open2;
       if(inUpTrend(3) &&
-         close2 > open2 && open1 > close2 + bearishSpread / barRatio && close1 < open2 - bearishSpread / barRatio)
+         close2 > open2 && open1 > close2 + bearishSpread && close1 < open2 - bearishSpread)
         {
          Alert("bearish engulfing");
         }
@@ -224,12 +222,15 @@ bool aoMaxLately(int shift)
      {
       double buffer[];
       CopyBuffer(aoHandle, 0, shift, aoPeakPeriod, buffer);
-      for(int i = 1; i < aoPeakPeriod - 1; i++)
+      for(int i = 0; i < aoPeakPeriod; i++)
         {
          if(buffer[i] < 0.0)
            {
             return false;
            }
+        }
+      for(int i = 1; i < aoPeakPeriod - 1; i++)
+        {
          if(buffer[i - 1] < buffer[i] && buffer[i] > buffer[i + 1])
            {
             if(debug)
@@ -250,12 +251,15 @@ bool aoMinLately(int shift)
      {
       double buffer[];
       CopyBuffer(aoHandle, 0, shift, aoPeakPeriod, buffer);
-      for(int i = 1; i < aoPeakPeriod - 1; i++)
+      for(int i = 0; i < aoPeakPeriod; i++)
         {
          if(buffer[i] > 0.0)
            {
             return false;
            }
+        }
+      for(int i = 1; i < aoPeakPeriod - 1; i++)
+        {
          if(buffer[i - 1] > buffer[i] && buffer[i] < buffer[i + 1])
            {
             if(debug)
