@@ -109,13 +109,13 @@ void findEngulfing()
 
       double bullishSpread = open2 - close2;
       if(inDownTrend(3) &&
-         open2 > close2 && close1 > open2 + bullishSpread && open1 < close2 - bullishSpread)
+         open2 > close2 && close1 > open2 && open1 < close2)
         {
          Alert("bulish engulfing");
         }
       double bearishSpread = close2 - open2;
       if(inUpTrend(3) &&
-         close2 > open2 && open1 > close2 + bearishSpread && close1 < open2 - bearishSpread)
+         close2 > open2 && open1 > close2 && close1 < open2)
         {
          Alert("bearish engulfing");
         }
