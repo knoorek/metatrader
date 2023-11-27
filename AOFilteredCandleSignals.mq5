@@ -4,8 +4,8 @@
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2023, MetaQuotes Ltd."
-#property link      "https://www.mql5.com"
-#property version   "1.00"
+#property link "https://www.mql5.com"
+#property version "1.00"
 
 input bool showHammers = true;
 input bool showEngulfing = true;
@@ -23,14 +23,16 @@ int aoHandle;
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   aoHandle = iAO(Symbol(),PERIOD_CURRENT);
+   aoHandle = iAO(Symbol(), PERIOD_CURRENT);
    if(aoHandle == INVALID_HANDLE)
      {
       Alert("Failed to create AO!");
-      return(INIT_FAILED);
+      return (INIT_FAILED);
      }
-   return(INIT_SUCCEEDED);
+
+   return (INIT_SUCCEEDED);
   }
+
 //+------------------------------------------------------------------+
 //| Expert deinitialization function                                 |
 //+------------------------------------------------------------------+
@@ -41,6 +43,7 @@ void OnDeinit(const int reason)
       Print("IndicatorRelease() failed. Error ", GetLastError());
      }
   }
+
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
@@ -49,6 +52,7 @@ void OnTick()
    datetime lastPeriodCheck = iTime(Symbol(), PERIOD_CURRENT, 1);
    if(lastPeriodCheck != lastPeriod)
      {
+      printf("Checkings signals at: %s", TimeToString(lastPeriodCheck, TIME_DATE | TIME_MINUTES));
       lastPeriod = lastPeriodCheck;
 
       findHammers();
@@ -56,16 +60,15 @@ void OnTick()
       findStars();
      }
   }
+
 //+------------------------------------------------------------------+
 //| ChartEvent function                                              |
 //+------------------------------------------------------------------+
-void OnChartEvent(const int id,
-                  const long &lparam,
-                  const double &dparam,
-                  const string &sparam)
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
   {
 //---
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -85,16 +88,18 @@ void findHammers()
          open > high - spread / 2.0 && close > high - spread / 2.0 &&
          MathAbs(open - close) < spread / barRatio)
         {
-         Alert("hammer up");
+         Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
         }
+
       if(inUpTrend(2) &&
          open < low + spread / 2.0 && close < low + spread / 2.0 &&
          MathAbs(open - close) < spread / barRatio)
         {
-         Alert("hammer down");
+         Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
         }
      }
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -111,16 +116,18 @@ void findEngulfing()
       if(inDownTrend(3) &&
          open2 > close2 && close1 > open2 && open1 < close2)
         {
-         Alert("bulish engulfing");
+         Alert("bulish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
+
       double bearishSpread = close2 - open2;
       if(inUpTrend(3) &&
          close2 > open2 && open1 > close2 && close1 < open2)
         {
-         Alert("bearish engulfing");
+         Alert("bearish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
      }
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -139,22 +146,24 @@ void findStars()
 
       double morningSpread = open3 - close3;
       if(inDownTrend(4) &&
-         open3 > close3 && open2 > close2 && close1 > open1
-         && open2 >= close3 - morningSpread / barRatio && open2 < close3 + morningSpread / barRatio
-         && open1 >= close3 - morningSpread / barRatio && close1 > close3 + morningSpread / barRatio)
+         open3 > close3 && open2 > close2 && close1 > open1 &&
+         open2 >= close3 - morningSpread / barRatio && open2 < close3 + morningSpread / barRatio &&
+         open1 >= close3 - morningSpread / barRatio && close1 > close3 + morningSpread / barRatio)
         {
-         Alert("morning star");
+         Alert("morning star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
         }
+
       double eveningSpread = close3 - open3;
       if(inUpTrend(4) &&
-         open3 < close3 && open2 < close2 && close1 < open1
-         && open2 <= close3 + eveningSpread / barRatio && open2 > close3 - eveningSpread / barRatio
-         && open1 <= close3 + eveningSpread / barRatio && close1 < close3 - eveningSpread / barRatio)
+         open3 < close3 && open2 < close2 && close1 < open1 &&
+         open2 <= close3 + eveningSpread / barRatio && open2 > close3 - eveningSpread / barRatio &&
+         open1 <= close3 + eveningSpread / barRatio && close1 < close3 - eveningSpread / barRatio)
         {
-         Alert("evening star");
+         Alert("evening star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
         }
      }
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -162,6 +171,7 @@ bool inUpTrend(int shift)
   {
    return ignoreTrendCheck || aoOneColorUpTrend(shift) || aoMaxLately(1);
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -169,6 +179,7 @@ bool inDownTrend(int shift)
   {
    return ignoreTrendCheck || aoOneColorDownTrend(shift) || aoMinLately(1);
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -185,12 +196,15 @@ bool aoOneColorUpTrend(int shift)
             return false;
            }
         }
+
       if(debug)
          printf("AO green for %d bars starting %d bars back", aoOneColorBars, shift + aoOneColorBars);
       return true;
      }
+
    return false;
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -207,12 +221,15 @@ bool aoOneColorDownTrend(int shift)
             return false;
            }
         }
+
       if(debug)
          printf("AO red for %d bars starting %d bars back", aoOneColorBars, shift + aoOneColorBars);
       return true;
      }
+
    return false;
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -229,6 +246,7 @@ bool aoMaxLately(int shift)
             return false;
            }
         }
+
       for(int i = 1; i < aoPeakPeriod - 1; i++)
         {
          if(buffer[i - 1] < buffer[i] && buffer[i] > buffer[i + 1])
@@ -238,10 +256,13 @@ bool aoMaxLately(int shift)
             return true;
            }
         }
+
       return false;
      }
+
    return false;
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -258,6 +279,7 @@ bool aoMinLately(int shift)
             return false;
            }
         }
+
       for(int i = 1; i < aoPeakPeriod - 1; i++)
         {
          if(buffer[i - 1] > buffer[i] && buffer[i] < buffer[i + 1])
@@ -267,8 +289,10 @@ bool aoMinLately(int shift)
             return true;
            }
         }
+
       return false;
      }
+
    return false;
   }
 //+------------------------------------------------------------------+
