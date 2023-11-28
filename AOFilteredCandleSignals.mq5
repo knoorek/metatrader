@@ -173,7 +173,7 @@ void findHarami()
   {
    if(showHarami)
      {
-      double barRatio = 0.3;
+      double barRatio = 3.0;
 
       double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
       double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
@@ -185,7 +185,7 @@ void findHarami()
       if(inUpTrend(2) &&
          open2 < close2 && open1 > close1 &&
          open2 < close1 && open1 < close2 &&
-         bearishSpread1 <= bearishSpread2 * barRatio)
+         bearishSpread1 <= bearishSpread2 / barRatio)
         {
          Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
@@ -194,7 +194,7 @@ void findHarami()
       if(inDownTrend(2) &&
          open2 > close2 && open1 < close1 &&
          open2 > close1 && open1 > close2 &&
-         bullishSpread1 <= bearishSpread2 * barRatio)
+         bullishSpread1 <= bearishSpread2 / barRatio)
         {
          Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
