@@ -53,7 +53,7 @@ void OnTick()
    datetime lastPeriodCheck = iTime(Symbol(), PERIOD_CURRENT, 1);
    if(lastPeriodCheck != lastPeriod)
      {
-      printf("Checkings signals at: %s", TimeToString(lastPeriodCheck, TIME_DATE | TIME_MINUTES));
+      //printf("Checkings signals at: %s", TimeToString(lastPeriodCheck, TIME_DATE | TIME_MINUTES));
       lastPeriod = lastPeriodCheck;
 
       findHammers();
@@ -173,20 +173,28 @@ void findHarami()
   {
    if(showHarami)
      {
+      double barRatio = 0.3;
+
       double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
       double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
       double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
       double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
 
+      double bearishSpread1 = open1 - close1;
+      double bearishSpread2 = close2 - open2;
       if(inUpTrend(2) &&
          open2 < close2 && open1 > close1 &&
-         open2 < close1 && open1 < close2)
+         open2 < close1 && open1 < close2 &&
+         bearishSpread1 <= bearishSpread2 * barRatio)
         {
          Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
+      double bullishSpread1 = close1 - open1;
+      double bullishSpread2 = open2 - close2;
       if(inDownTrend(2) &&
          open2 > close2 && open1 < close1 &&
-         open2 > close1 && open1 > close2)
+         open2 > close1 && open1 > close2 &&
+         bullishSpread1 <= bearishSpread2 * barRatio)
         {
          Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
