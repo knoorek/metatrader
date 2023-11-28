@@ -10,6 +10,7 @@
 input bool showHammers = true;
 input bool showEngulfing = true;
 input bool showStars = true;
+input bool showHarami = true;
 input int aoOneColorBars = 5;
 input int aoPeakPeriod = 5;
 input bool ignoreTrendCheck = false;
@@ -58,6 +59,7 @@ void OnTick()
       findHammers();
       findEngulfing();
       findStars();
+      findHarami();
      }
   }
 
@@ -160,6 +162,33 @@ void findStars()
          open1 <= close3 + eveningSpread / barRatio && close1 < close3 - eveningSpread / barRatio)
         {
          Alert("evening star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
+        }
+     }
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void findHarami()
+  {
+   if(showHarami)
+     {
+      double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
+      double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
+      double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
+      double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
+
+      if(inUpTrend(2) &&
+         open2 < close2 && open1 > close1 &&
+         open2 < close1 && open1 < close2)
+        {
+         Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+        }
+      if(inDownTrend(2) &&
+         open2 > close2 && open1 < close1 &&
+         open2 > close1 && open1 > close2)
+        {
+         Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
      }
   }
