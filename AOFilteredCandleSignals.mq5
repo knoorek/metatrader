@@ -118,7 +118,7 @@ void findEngulfing()
       if(inDownTrend(3) &&
          open2 > close2 && close1 > open2 && open1 < close2)
         {
-         Alert("bulish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+         Alert("bullish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
 
       double bearishSpread = close2 - open2;
