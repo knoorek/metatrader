@@ -15,9 +15,12 @@ input int aoOneColorBars = 5;
 input int aoPeakPeriod = 5;
 input bool ignoreTrendCheck = false;
 input bool debug = false;
+input bool signalScreenshot = true;
 
 datetime lastPeriod;
 int aoHandle;
+int scWidth = 1920;
+int scHeight = 768;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -91,6 +94,7 @@ void findHammers()
          MathAbs(open - close) < spread / barRatio)
         {
          Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         screenShot("hammerUp");
         }
 
       if(inUpTrend(2) &&
@@ -98,6 +102,7 @@ void findHammers()
          MathAbs(open - close) < spread / barRatio)
         {
          Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         screenShot("hammerDown");
         }
      }
   }
@@ -119,6 +124,7 @@ void findEngulfing()
          open2 > close2 && close1 > open2 && open1 < close2)
         {
          Alert("bullish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+         screenShot("bullishEngulfing");
         }
 
       double bearishSpread = close2 - open2;
@@ -126,6 +132,7 @@ void findEngulfing()
          close2 > open2 && open1 > close2 && close1 < open2)
         {
          Alert("bearish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+         screenShot("bearishEngulfing");
         }
      }
   }
@@ -153,6 +160,7 @@ void findStars()
          open1 >= close3 - morningSpread / barRatio && close1 > close3 + morningSpread / barRatio)
         {
          Alert("morning star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
+         screenShot("morningStar");
         }
 
       double eveningSpread = close3 - open3;
@@ -162,6 +170,7 @@ void findStars()
          open1 <= close3 + eveningSpread / barRatio && close1 < close3 - eveningSpread / barRatio)
         {
          Alert("evening star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
+         screenShot("eveningStar");
         }
      }
   }
@@ -188,6 +197,7 @@ void findHarami()
          bearishSpread1 <= bearishSpread2 / barRatio)
         {
          Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+         screenShot("bearishHarami");
         }
       double bullishSpread1 = close1 - open1;
       double bullishSpread2 = open2 - close2;
@@ -197,6 +207,7 @@ void findHarami()
          bullishSpread1 <= bearishSpread2 / barRatio)
         {
          Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+         screenShot("bullishHarami");
         }
      }
   }
@@ -331,5 +342,21 @@ bool aoMinLately(int shift)
      }
 
    return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void screenShot(string signalName)
+  {
+   if(signalScreenshot)
+     {
+      MqlDateTime currentTime;
+      TimeCurrent(currentTime);
+      string filename;
+      StringConcatenate(filename, Symbol(), "_", Period(), "_", signalName, "_", currentTime.year, currentTime.mon, currentTime.day, currentTime.hour, currentTime.min, ".gif");
+      StringToUpper(filename);
+      ChartScreenShot(0, filename, scWidth, scHeight);
+     }
   }
 //+------------------------------------------------------------------+
