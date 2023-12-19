@@ -289,7 +289,7 @@ void bigPriceShift()
    if(reportBigPriceShift)
      {
       int periodsCount = 24;
-      double changeRatio = 10.0;
+      double changeRatio = 2.0;
 
       double periodLow = INT_MAX;
       double periodHigh = INT_MIN;
@@ -310,7 +310,7 @@ void bigPriceShift()
 
       if(periodSpread / changeRatio < spread)
         {
-         Alert("Big hourly price change: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         Alert("big hourly price change: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
          screenShot("bigpricechange");
         }
      }
