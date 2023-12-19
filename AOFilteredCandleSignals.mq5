@@ -14,6 +14,7 @@ input bool showStars = true;
 input bool showHarami = true;
 input int aoOneColorBars = 5;
 input int aoPeakPeriod = 5;
+input bool reportBigPriceShift = true;
 input bool ignoreTrendCheck = false;
 input bool debug = false;
 input bool signalScreenshot = true;
@@ -66,6 +67,7 @@ void OnTick()
       findEngulfing();
       findStars();
       findHarami();
+      bigPriceShift();
      }
   }
 
@@ -275,6 +277,41 @@ void findHarami()
         {
          Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bullishHarami");
+        }
+     }
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void bigPriceShift()
+  {
+   if(reportBigPriceShift)
+     {
+      int periodsCount = 24;
+      double changeRatio = 10.0;
+
+      double periodLow = INT_MAX;
+      double periodHigh = INT_MIN;
+      for(int i = 1; i <= periodsCount; i++)
+        {
+         double low = iLow(Symbol(), PERIOD_CURRENT, i);
+         double high = iHigh(Symbol(), PERIOD_CURRENT, i);
+         if(low < periodLow)
+            periodLow = low;
+         if(high > periodHigh)
+            periodHigh = high;
+        }
+      double periodSpread = periodHigh - periodLow;
+
+      double low = iLow(Symbol(), PERIOD_CURRENT, 1);
+      double high = iHigh(Symbol(), PERIOD_CURRENT, 1);
+      double spread = high - low;
+
+      if(periodSpread / changeRatio < spread)
+        {
+         Alert("Big hourly price change: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         screenShot("bigpricechange");
         }
      }
   }
