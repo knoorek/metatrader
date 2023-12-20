@@ -135,13 +135,13 @@ void findTwoCandleHammers()
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
       double ratio = MathRound((high - low) / MathAbs(open - close));
-      if(isHammerUp(open, close, high, low, barRatio))
+      if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2))
         {
          Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerUp");
         }
 
-      if(isHammerDown(open, close, high, low, barRatio))
+      if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2))
         {
          Alert("two candle hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerDown");
@@ -162,7 +162,7 @@ void findEngulfing()
       double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
 
       double bullishSpread = open2 - close2;
-      if(inDownTrend(3) &&
+      if(inDownTrend(3) && isLowestLow(2, 2) &&
          open2 > close2 && close1 > open2 && open1 < close2)
         {
          Alert("bullish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
@@ -170,7 +170,7 @@ void findEngulfing()
         }
 
       double bearishSpread = close2 - open2;
-      if(inUpTrend(3) &&
+      if(inUpTrend(3) && isHighestHigh(2, 2) &&
          close2 > open2 && open1 > close2 && close1 < open2)
         {
          Alert("bearish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
@@ -196,7 +196,7 @@ void findStars()
       double close3 = iClose(Symbol(), PERIOD_CURRENT, 3);
 
       double morningSpread = open3 - close3;
-      if(inDownTrend(4) &&
+      if(inDownTrend(4) && isLowestLow(3, 2) &&
          open3 > close3 && open2 > close2 && close1 > open1 &&
          open2 >= close3 - morningSpread / barRatio && open2 < close3 + morningSpread / barRatio &&
          open1 >= close3 - morningSpread / barRatio && close1 > close3 + morningSpread / barRatio)
@@ -206,7 +206,7 @@ void findStars()
         }
 
       double eveningSpread = close3 - open3;
-      if(inUpTrend(4) &&
+      if(inUpTrend(4) && isHighestHigh(3, 2) &&
          open3 < close3 && open2 < close2 && close1 < open1 &&
          open2 <= close3 + eveningSpread / barRatio && open2 > close3 - eveningSpread / barRatio &&
          open1 <= close3 + eveningSpread / barRatio && close1 < close3 - eveningSpread / barRatio)
@@ -233,7 +233,7 @@ void findHarami()
 
       double bearishSpread1 = open1 - close1;
       double bearishSpread2 = close2 - open2;
-      if(inUpTrend(2) &&
+      if(inUpTrend(2) && isHighestHigh(2, 2) &&
          open2 < close2 && open1 > close1 &&
          open2 < close1 && open1 < close2 &&
          bearishSpread1 <= bearishSpread2 / barRatio)
@@ -243,7 +243,7 @@ void findHarami()
         }
       double bullishSpread1 = close1 - open1;
       double bullishSpread2 = open2 - close2;
-      if(inDownTrend(2) &&
+      if(inDownTrend(2) && isLowestLow(2, 2) &&
          open2 > close2 && open1 < close1 &&
          open2 > close1 && open1 > close2 &&
          bullishSpread1 <= bearishSpread2 / barRatio)
