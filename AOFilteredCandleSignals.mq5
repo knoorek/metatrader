@@ -59,7 +59,8 @@ void OnTick()
    datetime lastPeriodCheck = iTime(Symbol(), PERIOD_CURRENT, 1);
    if(lastPeriodCheck != lastPeriod)
      {
-      //printf("Checkings signals at: %s", TimeToString(lastPeriodCheck, TIME_DATE | TIME_MINUTES));
+      if(debug)
+         printf("Checkings signals at: %s", TimeToString(lastPeriodCheck, TIME_DATE | TIME_MINUTES));
       lastPeriod = lastPeriodCheck;
 
       findHammers();
@@ -93,15 +94,16 @@ void findHammers()
       double open = iOpen(Symbol(), PERIOD_CURRENT, 1);
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
+      int ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio))
         {
-         Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("hammerUp");
         }
 
       if(isHammerDown(open, close, high, low, barRatio))
         {
-         Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("hammerDown");
         }
      }
@@ -132,15 +134,16 @@ void findTwoCandleHammers()
       double open = iOpen(Symbol(), PERIOD_CURRENT, 2);
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
+      int ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio))
         {
-         Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerUp");
         }
 
       if(isHammerDown(open, close, high, low, barRatio))
         {
-         Alert("two candle hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
+         Alert("two candle hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerDown");
         }
      }
