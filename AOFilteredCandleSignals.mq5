@@ -94,14 +94,14 @@ void findHammers()
       double open = iOpen(Symbol(), PERIOD_CURRENT, 1);
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
-      int ratio = MathRound((high - low) / MathAbs(open - close));
-      if(isHammerUp(open, close, high, low, barRatio))
+      double ratio = MathRound((high - low) / MathAbs(open - close));
+      if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(1, 2))
         {
          Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("hammerUp");
         }
 
-      if(isHammerDown(open, close, high, low, barRatio))
+      if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(1, 2))
         {
          Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("hammerDown");
@@ -134,7 +134,7 @@ void findTwoCandleHammers()
       double open = iOpen(Symbol(), PERIOD_CURRENT, 2);
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
-      int ratio = MathRound((high - low) / MathAbs(open - close));
+      double ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio))
         {
          Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
@@ -147,36 +147,6 @@ void findTwoCandleHammers()
          screenShot("2candleHammerDown");
         }
      }
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool isHammerUp(double open, double close, double high, double low, double barRatio)
-  {
-   double spread = high - low;
-   if(inDownTrend(2) &&
-      open > high - spread / 2.0 && close > high - spread / 2.0 &&
-      MathAbs(open - close) < spread / barRatio)
-     {
-      return true;
-     }
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool isHammerDown(double open, double close, double high, double low, double barRatio)
-  {
-   double spread = high - low;
-   if(inUpTrend(2) &&
-      open < low + spread / 2.0 && close < low + spread / 2.0 &&
-      MathAbs(open - close) < spread / barRatio)
-     {
-      return true;
-     }
-   return false;
   }
 
 //+------------------------------------------------------------------+
@@ -333,6 +303,68 @@ bool inUpTrend(int shift)
 bool inDownTrend(int shift)
   {
    return ignoreTrendCheck || aoOneColorDownTrend(shift) || aoMinLately(1);
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isHammerUp(double open, double close, double high, double low, double barRatio)
+  {
+   double spread = high - low;
+   if(inDownTrend(2) &&
+      open > high - spread / 2.0 && close > high - spread / 2.0 &&
+      MathAbs(open - close) < spread / barRatio)
+     {
+      return true;
+     }
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isHammerDown(double open, double close, double high, double low, double barRatio)
+  {
+   double spread = high - low;
+   if(inUpTrend(2) &&
+      open < low + spread / 2.0 && close < low + spread / 2.0 &&
+      MathAbs(open - close) < spread / barRatio)
+     {
+      return true;
+     }
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isHighestHigh(int currentBar, int barsBack)
+  {
+   double currentBarHigh = iHigh(Symbol(), PERIOD_CURRENT, currentBar);
+   for(int i = currentBar + 1; i <= currentBar + barsBack; i++)
+     {
+      if(iHigh(Symbol(), PERIOD_CURRENT, i) > currentBarHigh)
+         if(debug)
+            printf("higher high at: %d", i);
+      return false;
+     }
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isLowestLow(int currentBar, int barsBack)
+  {
+   double currentBarLow = iLow(Symbol(), PERIOD_CURRENT, currentBar);
+   for(int i = currentBar + 1; i <= currentBar + barsBack; i++)
+     {
+      if(iLow(Symbol(), PERIOD_CURRENT, i) < currentBarLow)
+         if(debug)
+            printf("lower low at: %d", i);
+      return false;
+     }
+   return true;
   }
 
 //+------------------------------------------------------------------+
