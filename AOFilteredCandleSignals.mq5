@@ -135,13 +135,13 @@ void findTwoCandleHammers()
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
       double ratio = MathRound((high - low) / MathAbs(open - close));
-      if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2))
+      if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2) && close > open)
         {
          Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerUp");
         }
 
-      if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2))
+      if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2) && close < open)
         {
          Alert("two candle hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerDown");
