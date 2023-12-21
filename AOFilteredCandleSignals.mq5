@@ -344,9 +344,11 @@ bool isHighestHigh(int currentBar, int barsBack)
    for(int i = currentBar + 1; i <= currentBar + barsBack; i++)
      {
       if(iHigh(Symbol(), PERIOD_CURRENT, i) > currentBarHigh)
+        {
          if(debug)
             printf("higher high at: %d", i);
-      return false;
+         return false;
+        }
      }
    return true;
   }
@@ -360,9 +362,11 @@ bool isLowestLow(int currentBar, int barsBack)
    for(int i = currentBar + 1; i <= currentBar + barsBack; i++)
      {
       if(iLow(Symbol(), PERIOD_CURRENT, i) < currentBarLow)
+        {
          if(debug)
             printf("lower low at: %d", i);
-      return false;
+         return false;
+        }
      }
    return true;
   }
