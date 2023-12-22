@@ -514,7 +514,7 @@ void screenShot(string signalName)
    if(signalScreenshot)
      {
       string filename;
-      StringConcatenate(filename, Symbol(), "_", EnumToString(Period()), "_", signalName, "_", DoubleToString(GetTickCount()), "_", ".gif");
+      StringConcatenate(filename, Symbol(), "_", EnumToString(Period()), "_", signalName, "_", IntegerToString(GetTickCount()), ".gif");
       StringToUpper(filename);
       ChartScreenShot(0, filename, scWidth, scHeight);
      }
