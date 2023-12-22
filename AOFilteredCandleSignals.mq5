@@ -97,16 +97,20 @@ void findHammers()
       double ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(1, 2))
         {
-         Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         string message;
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         Alert("hammer up: ", message);
          screenShot("hammerUp");
-         mail("hammer up");
+         mail("hammer up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(1, 2))
         {
-         Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         string message;
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         Alert("hammer down: ", message);
          screenShot("hammerDown");
-         mail("hammer down");
+         mail("hammer down", message);
         }
      }
   }
@@ -139,16 +143,20 @@ void findTwoCandleHammers()
       double ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2) && close > open)
         {
-         Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         string message;
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         Alert("two candle hammer up: ", message);
          screenShot("2candleHammerUp");
-         mail("two candle hammer up");
+         mail("two candle hammer up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2) && close < open)
         {
-         Alert("two candle hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         string message;
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         Alert("two candle hammer down: ", message);
          screenShot("2candleHammerDown");
-         mail("two candle hammer down");
+         mail("two candle hammer down", message);
         }
      }
   }
@@ -171,7 +179,7 @@ void findEngulfing()
         {
          Alert("bullish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bullishEngulfing");
-         mail("bullish engulfing");
+         mail("bullish engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
 
       double bearishSpread = close2 - open2;
@@ -180,7 +188,7 @@ void findEngulfing()
         {
          Alert("bearish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bearishEngulfing");
-         mail("bearish engulfing");
+         mail("bearish engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
      }
   }
@@ -209,7 +217,7 @@ void findStars()
         {
          Alert("morning star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
          screenShot("morningStar");
-         mail("morning star");
+         mail("morning star", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
         }
 
       double eveningSpread = close3 - open3;
@@ -220,7 +228,7 @@ void findStars()
         {
          Alert("evening star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
          screenShot("eveningStar");
-         mail("evening star");
+         mail("evening star", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
         }
      }
   }
@@ -248,7 +256,7 @@ void findHarami()
         {
          Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bearishHarami");
-         mail("bearish harami");
+         mail("bearish harami", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
       double bullishSpread1 = close1 - open1;
       double bullishSpread2 = open2 - close2;
@@ -259,7 +267,7 @@ void findHarami()
         {
          Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bullishHarami");
-         mail("bullish harami");
+         mail("bullish harami", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
         }
      }
   }
@@ -295,7 +303,7 @@ void bigPriceShift()
         {
          Alert("big hourly price change: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
          screenShot("bigpricechange");
-         mail("big price change");
+         mail("big price change", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
         }
      }
   }
@@ -515,7 +523,7 @@ void screenShot(string signalName)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void mail(string signalName)
+void mail(string signalName, string mailContent)
   {
    if(sendMail)
      {
@@ -523,7 +531,7 @@ void mail(string signalName)
       datetime currentTime = TimeCurrent();
       StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " at: ", TimeToString(currentTime, TIME_DATE|TIME_SECONDS));
       printf("Sending mail: %s", signal);
-      if(!SendMail(signal, signal))
+      if(!SendMail(signal, mailContent))
          printf("Error sending mail %s", signal);
      }
   }
