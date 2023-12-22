@@ -99,12 +99,14 @@ void findHammers()
         {
          Alert("hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("hammerUp");
+         mail("hammer up");
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(1, 2))
         {
          Alert("hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("hammerDown");
+         mail("hammer down");
         }
      }
   }
@@ -139,12 +141,14 @@ void findTwoCandleHammers()
         {
          Alert("two candle hammer up: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerUp");
+         mail("two candle hammer up");
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2) && close < open)
         {
          Alert("two candle hammer down: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
          screenShot("2candleHammerDown");
+         mail("two candle hammer down");
         }
      }
   }
@@ -167,6 +171,7 @@ void findEngulfing()
         {
          Alert("bullish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bullishEngulfing");
+         mail("bullish engulfing");
         }
 
       double bearishSpread = close2 - open2;
@@ -175,6 +180,7 @@ void findEngulfing()
         {
          Alert("bearish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bearishEngulfing");
+         mail("bearish engulfing");
         }
      }
   }
@@ -203,6 +209,7 @@ void findStars()
         {
          Alert("morning star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
          screenShot("morningStar");
+         mail("morning star");
         }
 
       double eveningSpread = close3 - open3;
@@ -213,6 +220,7 @@ void findStars()
         {
          Alert("evening star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
          screenShot("eveningStar");
+         mail("evening star");
         }
      }
   }
@@ -240,6 +248,7 @@ void findHarami()
         {
          Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bearishHarami");
+         mail("bearish harami");
         }
       double bullishSpread1 = close1 - open1;
       double bullishSpread2 = open2 - close2;
@@ -250,6 +259,7 @@ void findHarami()
         {
          Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
          screenShot("bullishHarami");
+         mail("bullish harami");
         }
      }
   }
@@ -285,6 +295,7 @@ void bigPriceShift()
         {
          Alert("big hourly price change: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
          screenShot("bigpricechange");
+         mail("big price change");
         }
      }
   }
@@ -494,27 +505,26 @@ void screenShot(string signalName)
   {
    if(signalScreenshot)
      {
-      MqlDateTime currentTime;
-      TimeCurrent(currentTime);
       string filename;
-      StringConcatenate(filename, Symbol(), "_", EnumToString(Period()), "_", signalName, "_", currentTime.year, currentTime.mon, currentTime.day, currentTime.hour, currentTime.min, ".gif");
+      StringConcatenate(filename, Symbol(), "_", EnumToString(Period()), "_", signalName, "_", DoubleToString(GetTickCount()), "_", ".gif");
       StringToUpper(filename);
       ChartScreenShot(0, filename, scWidth, scHeight);
-      if(sendMail)
-         mail(filename);
      }
   }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void mail(string filename)
+void mail(string signalName)
   {
    if(sendMail)
      {
-      printf("Sending mail: %s", filename);
-      if(!SendMail(filename, filename))
-         printf("Error sending mail %s", filename);
+      string signal;
+      datetime currentTime = TimeCurrent();
+      StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " at: ", TimeToString(currentTime, TIME_DATE|TIME_SECONDS));
+      printf("Sending mail: %s", signal);
+      if(!SendMail(signal, signal))
+         printf("Error sending mail %s", signal);
      }
   }
 //+------------------------------------------------------------------+
