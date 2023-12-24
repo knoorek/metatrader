@@ -99,18 +99,14 @@ void findHammers()
         {
          string message;
          StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-         Alert("hammer up: ", message);
-         screenShot("hammerUp");
-         mail("hammer up", message);
+         handleSignal("hammer_up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(1, 2))
         {
          string message;
          StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-         Alert("hammer down: ", message);
-         screenShot("hammerDown");
-         mail("hammer down", message);
+         handleSignal("hammer_down", message);
         }
      }
   }
@@ -145,18 +141,14 @@ void findTwoCandleHammers()
         {
          string message;
          StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-         Alert("two candle hammer up: ", message);
-         screenShot("2candleHammerUp");
-         mail("two candle hammer up", message);
+         handleSignal("two_candle_hammer_up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2) && close < open)
         {
          string message;
          StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-         Alert("two candle hammer down: ", message);
-         screenShot("2candleHammerDown");
-         mail("two candle hammer down", message);
+         handleSignal("two_candle_hammer_down", message);
         }
      }
   }
@@ -176,20 +168,12 @@ void findEngulfing()
       double bullishSpread = open2 - close2;
       if(inDownTrend(3) && isLowestLow(2, 2) &&
          open2 > close2 && close1 > open2 && open1 < close2)
-        {
-         Alert("bullish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-         screenShot("bullishEngulfing");
-         mail("bullish engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-        }
+         handleSignal("bullish_engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
 
       double bearishSpread = close2 - open2;
       if(inUpTrend(3) && isHighestHigh(2, 2) &&
          close2 > open2 && open1 > close2 && close1 < open2)
-        {
-         Alert("bearish engulfing: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-         screenShot("bearishEngulfing");
-         mail("bearish engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-        }
+         handleSignal("bearish_engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
      }
   }
 
@@ -214,22 +198,14 @@ void findStars()
          open3 > close3 && open2 > close2 && close1 > open1 &&
          open2 >= close3 - morningSpread / barRatio && open2 < close3 + morningSpread / barRatio &&
          open1 >= close3 - morningSpread / barRatio && close1 > close3 + morningSpread / barRatio)
-        {
-         Alert("morning star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
-         screenShot("morningStar");
-         mail("morning star", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
-        }
+         handleSignal("morning_star", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
 
       double eveningSpread = close3 - open3;
       if(inUpTrend(4) && isHighestHigh(3, 2) &&
          open3 < close3 && open2 < close2 && close1 < open1 &&
          open2 <= close3 + eveningSpread / barRatio && open2 > close3 - eveningSpread / barRatio &&
          open1 <= close3 + eveningSpread / barRatio && close1 < close3 - eveningSpread / barRatio)
-        {
-         Alert("evening star: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
-         screenShot("eveningStar");
-         mail("evening star", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
-        }
+         handleSignal("evening_star", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 3), TIME_DATE | TIME_MINUTES));
      }
   }
 
@@ -247,28 +223,21 @@ void findHarami()
       double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
       double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
 
+      double bullishSpread1 = close1 - open1;
+      double bullishSpread2 = open2 - close2;
+      if(inDownTrend(2) && isLowestLow(2, 2) &&
+         open2 > close2 && open1 < close1 &&
+         open2 > close1 && open1 > close2 &&
+         bullishSpread1 <= bullishSpread2 / barRatio)
+         handleSignal("bullish_harami", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+
       double bearishSpread1 = open1 - close1;
       double bearishSpread2 = close2 - open2;
       if(inUpTrend(2) && isHighestHigh(2, 2) &&
          open2 < close2 && open1 > close1 &&
          open2 < close1 && open1 < close2 &&
          bearishSpread1 <= bearishSpread2 / barRatio)
-        {
-         Alert("bearish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-         screenShot("bearishHarami");
-         mail("bearish harami", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-        }
-      double bullishSpread1 = close1 - open1;
-      double bullishSpread2 = open2 - close2;
-      if(inDownTrend(2) && isLowestLow(2, 2) &&
-         open2 > close2 && open1 < close1 &&
-         open2 > close1 && open1 > close2 &&
-         bullishSpread1 <= bearishSpread2 / barRatio)
-        {
-         Alert("bullish harami: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-         screenShot("bullishHarami");
-         mail("bullish harami", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
-        }
+         handleSignal("bearish_harami", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
      }
   }
 
@@ -300,11 +269,7 @@ void bigPriceShift()
       double spread = high - low;
 
       if(periodSpread / changeRatio < spread)
-        {
-         Alert("big hourly price change: ", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
-         screenShot("bigpricechange");
-         mail("big price change", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
-        }
+         handleSignal("big_hourly_price_change", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES));
      }
   }
 
@@ -333,9 +298,7 @@ bool isHammerUp(double open, double close, double high, double low, double barRa
    if(inDownTrend(2) &&
       open > high - spread / 2.0 && close > high - spread / 2.0 &&
       MathAbs(open - close) < spread / barRatio)
-     {
       return true;
-     }
    return false;
   }
 
@@ -348,9 +311,7 @@ bool isHammerDown(double open, double close, double high, double low, double bar
    if(inUpTrend(2) &&
       open < low + spread / 2.0 && close < low + spread / 2.0 &&
       MathAbs(open - close) < spread / barRatio)
-     {
       return true;
-     }
    return false;
   }
 
@@ -402,9 +363,7 @@ bool aoOneColorUpTrend(int shift)
       for(int i = 1; i < aoOneColorBars; i++)
         {
          if(buffer[i - 1] < 0 || buffer[i] < 0 || buffer[i - 1] >= buffer[i])
-           {
             return false;
-           }
         }
 
       if(debug)
@@ -427,9 +386,7 @@ bool aoOneColorDownTrend(int shift)
       for(int i = 1; i < aoOneColorBars; i++)
         {
          if(buffer[i - 1] > 0 || buffer[i] > 0 || buffer[i - 1] <= buffer[i])
-           {
             return false;
-           }
         }
 
       if(debug)
@@ -452,9 +409,7 @@ bool aoMaxLately(int shift)
       for(int i = 0; i < aoPeakPeriod; i++)
         {
          if(buffer[i] < 0.0)
-           {
             return false;
-           }
         }
 
       for(int i = 1; i < aoPeakPeriod - 1; i++)
@@ -485,9 +440,7 @@ bool aoMinLately(int shift)
       for(int i = 0; i < aoPeakPeriod; i++)
         {
          if(buffer[i] > 0.0)
-           {
             return false;
-           }
         }
 
       for(int i = 1; i < aoPeakPeriod - 1; i++)
@@ -504,6 +457,16 @@ bool aoMinLately(int shift)
      }
 
    return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void handleSignal(string signalName, string message)
+  {
+   Alert(signalName, message);
+   screenShot(signalName);
+   mail(signalName, message);
   }
 
 //+------------------------------------------------------------------+
