@@ -22,6 +22,7 @@ input bool sendMail = true;
 
 datetime lastPeriod;
 int aoHandle;
+int acHandle;
 int scWidth = 1920;
 int scHeight = 768;
 
@@ -36,7 +37,11 @@ int OnInit()
       Alert("Failed to create AO!");
       return (INIT_FAILED);
      }
-
+   acHandle = iAC(Symbol(), PERIOD_CURRENT);
+   if(acHandle == INVALID_HANDLE)
+     {
+      Alert("Failed to create AC!");
+     }
    return (INIT_SUCCEEDED);
   }
 
@@ -47,7 +52,11 @@ void OnDeinit(const int reason)
   {
    if(!IndicatorRelease(aoHandle))
      {
-      Print("IndicatorRelease() failed. Error ", GetLastError());
+      Print("IndicatorRelease(aoHandle) failed. Error ", GetLastError());
+     }
+   if(!IndicatorRelease(acHandle))
+     {
+      Print("IndicatorRelease(acHandle) failed. Error ", GetLastError());
      }
   }
 
@@ -97,15 +106,17 @@ void findHammers()
       double ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(1, 2))
         {
+         int acceleration = acUpAcceleration(1);
          string message;
-         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acceleration);
          handleSignal("hammer_up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(1, 2))
         {
+         int acceleration = acDownAcceleration(1);
          string message;
-         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acceleration);
          handleSignal("hammer_down", message);
         }
      }
@@ -400,6 +411,46 @@ bool aoOneColorDownTrend(int shift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+int acUpAcceleration(int shift)
+  {
+   double buffer[];
+   int barsToCheck = 10;
+
+   int oneColorBars = 0;
+   CopyBuffer(acHandle, 0, shift, barsToCheck, buffer);
+   for(int i = barsToCheck - 1; i > 0; i--)
+     {
+      if(buffer[i] > buffer[i - 1])
+         oneColorBars++;
+      else
+         break;
+     }
+   return oneColorBars;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int acDownAcceleration(int shift)
+  {
+   double buffer[];
+   int barsToCheck = 10;
+
+   int oneColorBars = 0;
+   CopyBuffer(acHandle, 0, shift, barsToCheck, buffer);
+   for(int i = barsToCheck - 1; i > 0; i--)
+     {
+      if(buffer[i] < buffer[i - 1])
+         oneColorBars++;
+      else
+         break;
+     }
+   return oneColorBars;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool aoMaxLately(int shift)
   {
    if(aoPeakPeriod > 3)
@@ -464,7 +515,7 @@ bool aoMinLately(int shift)
 //+------------------------------------------------------------------+
 void handleSignal(string signalName, string message)
   {
-   Alert(signalName, message);
+   Alert(signalName, " ", message);
    screenShot(signalName);
    mail(signalName, message);
   }
