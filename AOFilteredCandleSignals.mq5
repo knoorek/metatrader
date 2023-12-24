@@ -106,17 +106,15 @@ void findHammers()
       double ratio = MathRound((high - low) / MathAbs(open - close));
       if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(1, 2))
         {
-         int acceleration = acUpAcceleration(1);
          string message;
-         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acceleration);
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acUpAcceleration(2));
          handleSignal("hammer_up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(1, 2))
         {
-         int acceleration = acDownAcceleration(1);
          string message;
-         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acceleration);
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acDownAcceleration(2));
          handleSignal("hammer_down", message);
         }
      }
@@ -151,14 +149,14 @@ void findTwoCandleHammers()
       if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2) && close > open)
         {
          string message;
-         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acUpAcceleration(2));
          handleSignal("two_candle_hammer_up", message);
         }
 
       if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2) && close < open)
         {
          string message;
-         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
+         StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acDownAcceleration(2));
          handleSignal("two_candle_hammer_down", message);
         }
      }
