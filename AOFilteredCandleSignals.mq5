@@ -127,7 +127,7 @@ void findTwoCandleHammers()
   {
    if(showTwoCandleHammers)
      {
-      double barRatio = 4.0;
+      double barRatio = 10.0;
 
       double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
       double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
@@ -146,14 +146,14 @@ void findTwoCandleHammers()
       double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
       double ratio = MathRound((high - low) / MathAbs(open - close));
-      if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2) && close > open)
+      if(isHammerUp(open, close, high, low, barRatio) && isLowestLow(2, 2))
         {
          string message;
          StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acUpAcceleration(2));
          handleSignal("two_candle_hammer_up", message);
         }
 
-      if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2) && close < open)
+      if(isHammerDown(open, close, high, low, barRatio) && isHighestHigh(2, 2))
         {
          string message;
          StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio, " acceleration: ", acDownAcceleration(2));
