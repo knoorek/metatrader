@@ -10,6 +10,7 @@
 input bool showHammers = true;
 input bool showTwoCandleHammers = true;
 input bool showEngulfing = true;
+input bool showSimpleEngulfing = true;
 input bool showStars = true;
 input bool showHarami = true;
 input int aoOneColorBars = 5;
@@ -75,6 +76,7 @@ void OnTick()
       findHammers();
       findTwoCandleHammers();
       findEngulfing();
+      findSimpleEngulfing();
       findStars();
       findHarami();
       bigPriceShift();
@@ -174,15 +176,39 @@ void findEngulfing()
       double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
       double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
 
-      double bullishSpread = open2 - close2;
       if(inDownTrend(3) && isLowestLow(2, 2) &&
          open2 > close2 && close1 > open2 && open1 < close2)
          handleSignal("bullish_engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
 
-      double bearishSpread = close2 - open2;
       if(inUpTrend(3) && isHighestHigh(2, 2) &&
          close2 > open2 && open1 > close2 && close1 < open2)
          handleSignal("bearish_engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+     }
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void findSimpleEngulfing()
+  {
+   if(showSimpleEngulfing)
+     {
+      double barRatio = 3;
+      
+      double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
+      double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
+      double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
+      double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
+
+      double bullishSpread = open2 - close2;
+      if(inDownTrend(3) && isLowestLow(2, 2) &&
+         open2 > close2 && close1 > open2 + bullishSpread / barRatio)
+         handleSignal("bullish_simple_engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
+
+      double bearishSpread = close2 - open2;
+      if(inUpTrend(3) && isHighestHigh(2, 2) &&
+         close2 > open2 && close1 < open2 - bearishSpread / barRatio)
+         handleSignal("bearish_simple_engulfing", TimeToString(iTime(Symbol(), PERIOD_CURRENT, 2), TIME_DATE | TIME_MINUTES));
      }
   }
 
