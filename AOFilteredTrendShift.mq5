@@ -84,14 +84,16 @@ void findHammers()
    if(ratio > hammerMaxRatio)
       return;
 
-   if(inDownTrend(2) && isLowestLow(1, 2))
+   if(inDownTrend(2) && isLowestLow(1, 2) &&
+      high - open < open - low && high - close < close - low)
      {
       string message;
       StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
       handleSignal("hammer_up", message);
      }
 
-   if(inUpTrend(2) && isHighestHigh(1, 2))
+   if(inUpTrend(2) && isHighestHigh(1, 2) &&
+      high - open > open - low && high - close > close - low)
      {
       string message;
       StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
