@@ -14,6 +14,7 @@ input int aoPeakPeriod = 5;
 input bool debug = false;
 input bool signalScreenshot = true;
 input bool sendMail = true;
+input bool sendCallMeBotMessage = true;
 
 datetime lastPeriod;
 int aoHandle;
@@ -298,6 +299,7 @@ void handleSignal(string signalName, string message)
    Alert(signalName, " ", message);
    screenShot(signalName);
    mail(signalName, message);
+   callMeBotMessage(signalName);
   }
 
 //+------------------------------------------------------------------+
@@ -327,6 +329,29 @@ void mail(string signalName, string mailContent)
       printf("Sending mail: %s", signal);
       if(!SendMail(signal, mailContent))
          printf("Error sending mail %s", signal);
+     }
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void callMeBotMessage(string signalName)
+  {
+   if(sendCallMeBotMessage)
+     {
+      string cookie=NULL, headers;
+      char   post[], result[];
+      string url="https://api.callmebot.com/whatsapp.php?phone=___________&apikey=_______&text=";
+
+      string signal;
+      datetime currentTime = TimeCurrent();
+      StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " at: ", TimeToString(currentTime, TIME_DATE|TIME_SECONDS));
+      StringReplace(signal, " ", "+");
+      StringConcatenate(url, url, signal);
+      printf("Sending WhatsApp message: %s", url);
+      int res = WebRequest("GET", url, cookie, NULL, 500, post, 0, result, headers);
+      if(res == -1)
+         printf("Error sending signal message: %i", GetLastError());
      }
   }
 //+------------------------------------------------------------------+
