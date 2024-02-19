@@ -88,17 +88,13 @@ void findHammers()
    if(inDownTrend(2) && isLowestLow(1, 2) &&
       high - open < open - low && high - close < close - low)
      {
-      string message;
-      StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-      handleSignal("hammer_up", message);
+      handleSignal("hammer_up", ratio);
      }
 
    if(inUpTrend(2) && isHighestHigh(1, 2) &&
       high - open > open - low && high - close > close - low)
      {
-      string message;
-      StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-      handleSignal("hammer_down", message);
+      handleSignal("hammer_down", ratio);
      }
   }
 
@@ -118,16 +114,12 @@ void findEngulfing()
 
    if(close2 < open2 && close1 > open1 && inDownTrend(3) && isLowestLow(2, 2))
      {
-      string message;
-      StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-      handleSignal("bullish_engulfing", message);
+      handleSignal("bullish_engulfing", ratio);
      }
 
    if(close2 > open2 && close1 < open1 && inUpTrend(3) && isHighestHigh(2, 2))
      {
-      string message;
-      StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", ratio);
-      handleSignal("bearish_engulfing", message);
+      handleSignal("bearish_engulfing", ratio);
      }
   }
 
@@ -294,12 +286,14 @@ bool aoMinLately(int shift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void handleSignal(string signalName, string message)
+void handleSignal(string signalName, double ratio)
   {
-   Alert(signalName, " ", message);
    screenShot(signalName);
+   string message;
+   StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", NormalizeDouble(ratio, 3));
+   Alert(signalName, " ", message);
    mail(signalName, message);
-   callMeBotMessage(signalName);
+   callMeBotMessage(signalName, message);
   }
 
 //+------------------------------------------------------------------+
@@ -325,7 +319,7 @@ void mail(string signalName, string mailContent)
      {
       string signal;
       datetime currentTime = TimeCurrent();
-      StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " at: ", TimeToString(currentTime, TIME_DATE|TIME_SECONDS));
+      StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " reported at: ", TimeToString(currentTime, TIME_DATE|TIME_SECONDS));
       printf("Sending mail: %s", signal);
       if(!SendMail(signal, mailContent))
          printf("Error sending mail %s", signal);
@@ -335,7 +329,7 @@ void mail(string signalName, string mailContent)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void callMeBotMessage(string signalName)
+void callMeBotMessage(string signalName, string message)
   {
    if(sendCallMeBotMessage)
      {
@@ -344,8 +338,7 @@ void callMeBotMessage(string signalName)
       string url="https://api.callmebot.com/whatsapp.php?phone=___________&apikey=_______&text=";
 
       string signal;
-      datetime currentTime = TimeCurrent();
-      StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " at: ", TimeToString(currentTime, TIME_DATE|TIME_SECONDS));
+      StringConcatenate(signal, Symbol(), " ", EnumToString(Period()), " ", signalName, " at: ", message);
       StringReplace(signal, " ", "+");
       StringConcatenate(url, url, signal);
       printf("Sending WhatsApp message: %s", url);
