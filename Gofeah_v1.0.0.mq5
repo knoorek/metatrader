@@ -157,9 +157,9 @@ void checkGatorSleeping()
       if(iDebug)
          printf("Gator sleeping, yawns: %d", yawns);
       GatorSleeping = true;
-      handleSignal("GATOR_SLEEPING", yawns);
+      handleSignal("gator_sleeping", yawns);
      }
-   if(yawns < iGatorYawnsCount)
+   if(yawns < iGatorYawnsCount && GatorSleeping)
      {
       if(iDebug)
          printf("Gator awake");
