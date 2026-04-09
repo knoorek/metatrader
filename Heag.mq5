@@ -7,16 +7,27 @@
 #property link "https://www.mql5.com"
 #property version "1.0"
 
-const string expertVersion = "1.0.0";
+const string expertVersion = "1.1.0";
 
 input double iHammerMaxRatio = 0.2;
 input double iEngulfingMinRatio = 0.95;
 input int iAoOneColorBars = 3;
 input int iAoPeakPeriod = 5;
-input int iGatorSleepingPeriod = 89;
-input int iGatorYawnsCount = 3;
+input int iGatorFractalsCount = 5;
 input bool iDebug = false;
 input bool iSignalScreenshot = true;
+
+struct Fractal
+  {
+   int               bar;
+   double            value;
+  };
+
+struct MinMax
+  {
+   double            min;
+   double            max;
+  };
 
 datetime LastPeriod;
 bool GatorSleeping;
@@ -30,6 +41,7 @@ int ScHeight = 768;
 //+------------------------------------------------------------------+
 int OnInit()
   {
+   ObjectsDeleteAll(0, 0);
    AoHandle = iAO(Symbol(), PERIOD_CURRENT);
    if(AoHandle == INVALID_HANDLE)
      {
@@ -50,7 +62,7 @@ int OnInit()
       ObjectSetInteger(0, labelName, OBJPROP_XDISTANCE, 40);
       ObjectSetInteger(0, labelName, OBJPROP_YDISTANCE, 30);
       ObjectSetString(0, labelName, OBJPROP_TEXT, expertVersion);
-      ObjectSetInteger(0, labelName, OBJPROP_COLOR, clrWhite);
+      ObjectSetInteger(0, labelName, OBJPROP_COLOR, clrBlack);
       ObjectSetInteger(0, labelName, OBJPROP_FONTSIZE, 6);
      }
    return (INIT_SUCCEEDED);
@@ -154,102 +166,139 @@ void findEngulfing()
 //+------------------------------------------------------------------+
 void checkGatorSleeping()
   {
-   double jaws[];
-   double teeth[];
-   double lips[];
-
-   CopyBuffer(GatorHandle, 0, 1, iGatorSleepingPeriod, jaws);
-   CopyBuffer(GatorHandle, 1, 1, iGatorSleepingPeriod, teeth);
-   CopyBuffer(GatorHandle, 2, 1, iGatorSleepingPeriod, lips);
-
-   datetime yawnsTime[];
-   yawns(jaws, teeth, lips, yawnsTime);
-   int yawns = ArraySize(yawnsTime);
+   Fractal upFractals[];
+   Fractal downFractals[];
+   ArrayResize(upFractals, iGatorFractalsCount);
+   ArrayResize(downFractals, iGatorFractalsCount);
+   int bars = findFractals(upFractals, downFractals);
    if(iDebug)
-      printf("Yawns count: %d", yawns);
-   if(yawns >= iGatorYawnsCount && !GatorSleeping)
-     {
-      if(iDebug)
-         printf("Gator sleeping, yawns: %d", yawns);
-      GatorSleeping = true;
-      createVlines(yawnsTime);
-      handleSignal("gator_sleeping", yawns);
-     }
-   if(yawns < iGatorYawnsCount && GatorSleeping)
-     {
-      if(iDebug)
-         printf("Gator awake");
-      ObjectsDeleteAll(0, 0, OBJ_VLINE);
-      GatorSleeping = false;
-     }
-  }
+      printf("Setting fractals up to: %s",
+             TimeToString(iTime(Symbol(), PERIOD_CURRENT, bars), TIME_DATE | TIME_MINUTES)
+            );
 
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void yawns(double &jaws[], double &teeth[], double &lips[], datetime &yawnsTime[])
-  {
-   int yawns = 0;
-   double lastMouthPosition = 0;
-   for(int i = 0; i < iGatorSleepingPeriod; i++)
+   MinMax gatorValues[];
+   ArrayResize(gatorValues, bars);
+   gatorMinMax(bars, gatorValues);
+
+   bool gatorSleeping = true;
+   for(int i = 0; i < iGatorFractalsCount; i++)
      {
-      datetime barTime = iTime(Symbol(), PERIOD_CURRENT, iGatorSleepingPeriod - i);
-      int currentMouthPosition = mouthPosition(jaws[i], teeth[i], lips[i]);
-      if(iDebug)
-        {
-         printf("CurrentMouthPosition at: %s, %d", TimeToString(barTime, TIME_DATE | TIME_MINUTES), currentMouthPosition);
-         printf("Jaws at: %s, %+.1f", TimeToString(barTime, TIME_DATE | TIME_MINUTES), jaws[i]);
-         printf("Teeth at: %s, %+.1f", TimeToString(barTime, TIME_DATE | TIME_MINUTES), teeth[i]);
-         printf("Lips at: %s, %+.1f", TimeToString(barTime, TIME_DATE | TIME_MINUTES), lips[i]);
-        }
-      if(i == 0)
-        {
-         lastMouthPosition = currentMouthPosition;
-         continue;
-        }
-      if(currentMouthPosition != lastMouthPosition && currentMouthPosition != 0 && lastMouthPosition != 0)
+      if(upFractals[i].value < gatorValues[upFractals[i].bar].max)
         {
          if(iDebug)
-            printf("Yawn!");
-         ArrayResize(yawnsTime, yawns + 1, 10);
-         yawnsTime[yawns] = barTime;
-         yawns++;
+           {
+            datetime barTime = iTime(Symbol(), PERIOD_CURRENT, upFractals[i].bar);
+            printf("High fractal %f, lower than Gator %f, at: %s",
+                   upFractals[i].value,
+                   gatorValues[upFractals[i].bar].max,
+                   TimeToString(barTime, TIME_DATE | TIME_MINUTES)
+                  );
+           }
+         gatorSleeping = false;
+         break;
         }
-      if(currentMouthPosition != 0)
+      if(downFractals[i].value > gatorValues[downFractals[i].bar].min)
         {
-         lastMouthPosition = currentMouthPosition;
+         if(iDebug)
+           {
+            datetime barTime = iTime(Symbol(), PERIOD_CURRENT, downFractals[i].bar);
+            printf("Down fractal %f, higher than Gator %f, at: %s",
+                   downFractals[i].value,
+                   gatorValues[downFractals[i].bar].min,
+                   TimeToString(barTime, TIME_DATE | TIME_MINUTES));
+           }
+         gatorSleeping = false;
+         break;
         }
      }
+   if(!GatorSleeping && gatorSleeping)
+     {
+      GatorSleeping = gatorSleeping;
+      if(iDebug)
+         printf("gator sleeping");
+      handleSignal("gator_sleeping", bars);
+     }
+   if(GatorSleeping && !gatorSleeping)
+     {
+      GatorSleeping = gatorSleeping;
+      if(iDebug)
+         printf("gator awake");
+     }
   }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-int mouthPosition(double jaws, double teeth, double lips)
+int findFractals(Fractal &upFractals[], Fractal &downFractals[])
   {
-   if(jaws > teeth && teeth > lips)
+   int upFractalsCount = 0;
+   int downFractalsCount = 0;
+   int bar = 3;
+   while(true)
      {
-      return -1;
+      datetime barTime = iTime(Symbol(), PERIOD_CURRENT, bar);
+
+      double prevHigh1 = iHigh(Symbol(), PERIOD_CURRENT, bar - 1);
+      double prevHigh2 = iHigh(Symbol(), PERIOD_CURRENT, bar - 2);
+      double currentHigh = iHigh(Symbol(), PERIOD_CURRENT, bar);
+      double nextHigh1 = iHigh(Symbol(), PERIOD_CURRENT, bar + 1);
+      double nextHigh2 = iHigh(Symbol(), PERIOD_CURRENT, bar + 2);
+      if(currentHigh > prevHigh1 && currentHigh > prevHigh2 &&
+         currentHigh > nextHigh1 && currentHigh > nextHigh2 &&
+         upFractalsCount < iGatorFractalsCount)
+        {
+         upFractals[upFractalsCount].bar = bar;
+         upFractals[upFractalsCount].value = currentHigh;
+         upFractalsCount++;
+         if(iDebug)
+            printf("Fractal up: %.1f, at: %s, count: %d", currentHigh, TimeToString(barTime, TIME_DATE | TIME_MINUTES), upFractalsCount);
+        }
+      double prevLow1 = iLow(Symbol(), PERIOD_CURRENT, bar - 1);
+      double prevLow2 = iLow(Symbol(), PERIOD_CURRENT, bar - 2);
+      double currentLow = iLow(Symbol(), PERIOD_CURRENT, bar);
+      double nextLow1 = iLow(Symbol(), PERIOD_CURRENT, bar + 1);
+      double nextLow2 = iLow(Symbol(), PERIOD_CURRENT, bar + 2);
+      if(currentLow < prevLow1 && currentLow < prevLow2 &&
+         currentLow < nextLow1 && currentLow < nextLow2 &&
+         downFractalsCount < iGatorFractalsCount)
+        {
+         downFractals[downFractalsCount].bar = bar;
+         downFractals[downFractalsCount].value = currentLow;
+         downFractalsCount++;
+         if(iDebug)
+            printf("Fractal down: %.1f, at: %s, count: %d", currentLow, TimeToString(barTime, TIME_DATE | TIME_MINUTES), downFractalsCount);
+        }
+      if(upFractalsCount == iGatorFractalsCount && downFractalsCount == iGatorFractalsCount)
+         break;
+      bar++;
      }
-   if(jaws < teeth && teeth < lips)
-     {
-      return 1;
-     }
-   return 0;
+   return bar;
   }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void createVlines(datetime &yawnsTime[])
+void gatorMinMax(int bars, MinMax &values[])
   {
-   for(int i = 0; i < ArraySize(yawnsTime); i++)
+   double jaw[];
+   double teeth[];
+   double lip[];
+
+   CopyBuffer(GatorHandle, 0, 1, bars, jaw);
+   CopyBuffer(GatorHandle, 1, 1, bars, teeth);
+   CopyBuffer(GatorHandle, 2, 1, bars, lip);
+
+   ArrayReverse(jaw);
+   ArrayReverse(teeth);
+   ArrayReverse(lip);
+
+   for(int i = 0; i < bars; i++)
      {
-      string vlineName = "yawn" + IntegerToString(i);
-      if(ObjectCreate(0, vlineName, OBJ_VLINE, 0, yawnsTime[i], 0))
-         ObjectSetInteger(0, vlineName, OBJPROP_WIDTH, 3);
+      values[i].min = MathMin(MathMin(jaw[i], teeth[i]), MathMin(jaw[i], lip[i]));
+      values[i].max = MathMax(MathMax(jaw[i], teeth[i]), MathMax(jaw[i], lip[i]));
      }
   }
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -434,5 +483,9 @@ void screenShot(string signalName)
       ChartScreenShot(0, filename, ScWidth, ScHeight);
      }
   }
+
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
 
 //+------------------------------------------------------------------+
