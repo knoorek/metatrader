@@ -7,12 +7,10 @@
 #property link "https://www.mql5.com"
 #property version "1.0"
 
-const string expertVersion = "1.1.0";
+const string expertVersion = "1.2.0";
 
 input double iHammerMaxRatio = 0.2;
-input double iEngulfingMinRatio = 0.95;
 input int iAoOneColorBars = 3;
-input int iAoPeakPeriod = 5;
 input int iGatorFractalsCount = 5;
 input bool iDebug = false;
 input bool iSignalScreenshot = true;
@@ -96,7 +94,6 @@ void OnTick()
       LastPeriod = lastPeriodCheck;
 
       findHammers();
-      findEngulfing();
       checkGatorSleeping();
      }
   }
@@ -133,31 +130,6 @@ void findHammers()
       high - open > open - low && high - close > close - low)
      {
       handleSignal("hammer_down", ratio);
-     }
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void findEngulfing()
-  {
-   double open1 = iOpen(Symbol(), PERIOD_CURRENT, 1);
-   double close1 = iClose(Symbol(), PERIOD_CURRENT, 1);
-   double open2 = iOpen(Symbol(), PERIOD_CURRENT, 2);
-   double close2 = iClose(Symbol(), PERIOD_CURRENT, 2);
-
-   double ratio = MathAbs(open1 - close1) / MathAbs(open2 - close2);
-   if(ratio < iEngulfingMinRatio)
-      return;
-
-   if(close2 < open2 && close1 > open1 && inDownTrend(3) && isLowestLow(2, 2))
-     {
-      handleSignal("bullish_engulfing", ratio);
-     }
-
-   if(close2 > open2 && close1 < open1 && inUpTrend(3) && isHighestHigh(2, 2))
-     {
-      handleSignal("bearish_engulfing", ratio);
      }
   }
 
@@ -304,7 +276,7 @@ void gatorMinMax(int bars, MinMax &values[])
 //+------------------------------------------------------------------+
 bool inUpTrend(int shift)
   {
-   return aoOneColorUpTrend(shift) || aoMaxLately(1);
+   return aoOneColorUpTrend(shift);
   }
 
 //+------------------------------------------------------------------+
@@ -312,7 +284,7 @@ bool inUpTrend(int shift)
 //+------------------------------------------------------------------+
 bool inDownTrend(int shift)
   {
-   return aoOneColorDownTrend(shift) || aoMinLately(1);
+   return aoOneColorDownTrend(shift);
   }
 
 //+------------------------------------------------------------------+
@@ -392,68 +364,6 @@ bool aoOneColorDownTrend(int shift)
       if(iDebug)
          printf("AO red for %d bars starting %d bars back", iAoOneColorBars, shift + iAoOneColorBars);
       return true;
-     }
-
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool aoMaxLately(int shift)
-  {
-   if(iAoPeakPeriod > 3)
-     {
-      double buffer[];
-      CopyBuffer(AoHandle, 0, shift, iAoPeakPeriod, buffer);
-      for(int i = 0; i < iAoPeakPeriod; i++)
-        {
-         if(buffer[i] < 0.0)
-            return false;
-        }
-
-      for(int i = 1; i < iAoPeakPeriod - 1; i++)
-        {
-         if(buffer[i - 1] < buffer[i] && buffer[i] > buffer[i + 1])
-           {
-            if(iDebug)
-               printf("AO max peak at %d bars back", iAoPeakPeriod - i);
-            return true;
-           }
-        }
-
-      return false;
-     }
-
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool aoMinLately(int shift)
-  {
-   if(iAoPeakPeriod > 3)
-     {
-      double buffer[];
-      CopyBuffer(AoHandle, 0, shift, iAoPeakPeriod, buffer);
-      for(int i = 0; i < iAoPeakPeriod; i++)
-        {
-         if(buffer[i] > 0.0)
-            return false;
-        }
-
-      for(int i = 1; i < iAoPeakPeriod - 1; i++)
-        {
-         if(buffer[i - 1] > buffer[i] && buffer[i] < buffer[i + 1])
-           {
-            if(iDebug)
-               printf("AO min peak at %d bars back", iAoPeakPeriod - i);
-            return true;
-           }
-        }
-
-      return false;
      }
 
    return false;
