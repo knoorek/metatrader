@@ -7,11 +7,10 @@
 #property link "https://www.mql5.com"
 #property version "1.0"
 
-const string expertVersion = "1.2.0";
+const string expertVersion = "1.3.0";
 
-input double iHammerMaxRatio = 0.2;
+input double iHammerMaxRatio = 0.33;
 input int iAoOneColorBars = 3;
-input int iGatorFractalsCount = 5;
 input bool iDebug = false;
 input bool iSignalScreenshot = true;
 
@@ -94,7 +93,6 @@ void OnTick()
       LastPeriod = lastPeriodCheck;
 
       findHammers();
-      checkGatorSleeping();
      }
   }
 
@@ -116,159 +114,65 @@ void findHammers()
    double open = iOpen(Symbol(), PERIOD_CURRENT, 1);
    double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
-   double ratio = MathAbs(open - close) / (high - low);
-   if(ratio > iHammerMaxRatio)
-      return;
-
    if(inDownTrend(2) && isLowestLow(1, 2) &&
-      high - open < open - low && high - close < close - low)
+      isHammerUp(high, low, open, close))
      {
-      handleSignal("hammer_up", ratio);
+      double topWick = high - MathMax(open, close);
+      double bottomWick = MathMin(open, close) - low;
+      ObjectCreate(0, "hammer_up_" + IntegerToString(GetTickCount()), OBJ_ARROW_BUY, 0, iTime(Symbol(), PERIOD_CURRENT, 1), low);
+      handleSignal("hammer_up", topWick / bottomWick);
      }
 
    if(inUpTrend(2) && isHighestHigh(1, 2) &&
-      high - open > open - low && high - close > close - low)
+      isHammerDown(high, low, open, close))
      {
-      handleSignal("hammer_down", ratio);
+      double topWick = high - MathMax(open, close);
+      double bottomWick = MathMin(open, close) - low;
+      ObjectCreate(0, "hammer_down_" + IntegerToString(GetTickCount()), OBJ_ARROW_SELL, 0, iTime(Symbol(), PERIOD_CURRENT, 1), high);
+      handleSignal("hammer_down", bottomWick / topWick);
      }
   }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void checkGatorSleeping()
+bool isHammerUp(double high, double low, double open, double close)
   {
-   Fractal upFractals[];
-   Fractal downFractals[];
-   ArrayResize(upFractals, iGatorFractalsCount);
-   ArrayResize(downFractals, iGatorFractalsCount);
-   int bars = findFractals(upFractals, downFractals);
-   if(iDebug)
-      printf("Setting fractals up to: %s",
-             TimeToString(iTime(Symbol(), PERIOD_CURRENT, bars), TIME_DATE | TIME_MINUTES)
-            );
+   if(high - close > close - low)
+      return false;
+   if(iHammerMaxRatio == -1.0)
+      return true;
+   double topWick = high - MathMax(open, close);
+   double bottomWick = MathMin(open, close) - low;
 
-   MinMax gatorValues[];
-   ArrayResize(gatorValues, bars);
-   gatorMinMax(bars, gatorValues);
-
-   bool gatorSleeping = true;
-   for(int i = 0; i < iGatorFractalsCount; i++)
+   if(bottomWick > 0 && topWick / bottomWick < iHammerMaxRatio)
      {
-      if(upFractals[i].value < gatorValues[upFractals[i].bar].max)
-        {
-         if(iDebug)
-           {
-            datetime barTime = iTime(Symbol(), PERIOD_CURRENT, upFractals[i].bar);
-            printf("High fractal %f, lower than Gator %f, at: %s",
-                   upFractals[i].value,
-                   gatorValues[upFractals[i].bar].max,
-                   TimeToString(barTime, TIME_DATE | TIME_MINUTES)
-                  );
-           }
-         gatorSleeping = false;
-         break;
-        }
-      if(downFractals[i].value > gatorValues[downFractals[i].bar].min)
-        {
-         if(iDebug)
-           {
-            datetime barTime = iTime(Symbol(), PERIOD_CURRENT, downFractals[i].bar);
-            printf("Down fractal %f, higher than Gator %f, at: %s",
-                   downFractals[i].value,
-                   gatorValues[downFractals[i].bar].min,
-                   TimeToString(barTime, TIME_DATE | TIME_MINUTES));
-           }
-         gatorSleeping = false;
-         break;
-        }
-     }
-   if(!GatorSleeping && gatorSleeping)
-     {
-      GatorSleeping = gatorSleeping;
       if(iDebug)
-         printf("gator sleeping");
-      handleSignal("gator_sleeping", bars);
+         printf("Top wick: %f, bottom wick: %f, ratio: %f", topWick, bottomWick, topWick / bottomWick);
+      return true;
      }
-   if(GatorSleeping && !gatorSleeping)
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isHammerDown(double high, double low, double open, double close)
+  {
+   if(high - close < close - low)
+      return false;
+   if(iHammerMaxRatio == -1.0)
+      return true;
+   double topWick = high - MathMax(open, close);
+   double bottomWick = MathMin(open, close) - low;
+
+   if(topWick > 0 && bottomWick / topWick < iHammerMaxRatio)
      {
-      GatorSleeping = gatorSleeping;
       if(iDebug)
-         printf("gator awake");
+         printf("Top wick: %f, bottom wick: %f, ratio: %f", topWick, bottomWick, bottomWick / topWick);
+      return true;
      }
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-int findFractals(Fractal &upFractals[], Fractal &downFractals[])
-  {
-   int upFractalsCount = 0;
-   int downFractalsCount = 0;
-   int bar = 3;
-   while(true)
-     {
-      datetime barTime = iTime(Symbol(), PERIOD_CURRENT, bar);
-
-      double prevHigh1 = iHigh(Symbol(), PERIOD_CURRENT, bar - 1);
-      double prevHigh2 = iHigh(Symbol(), PERIOD_CURRENT, bar - 2);
-      double currentHigh = iHigh(Symbol(), PERIOD_CURRENT, bar);
-      double nextHigh1 = iHigh(Symbol(), PERIOD_CURRENT, bar + 1);
-      double nextHigh2 = iHigh(Symbol(), PERIOD_CURRENT, bar + 2);
-      if(currentHigh > prevHigh1 && currentHigh > prevHigh2 &&
-         currentHigh > nextHigh1 && currentHigh > nextHigh2 &&
-         upFractalsCount < iGatorFractalsCount)
-        {
-         upFractals[upFractalsCount].bar = bar;
-         upFractals[upFractalsCount].value = currentHigh;
-         upFractalsCount++;
-         if(iDebug)
-            printf("Fractal up: %.1f, at: %s, count: %d", currentHigh, TimeToString(barTime, TIME_DATE | TIME_MINUTES), upFractalsCount);
-        }
-      double prevLow1 = iLow(Symbol(), PERIOD_CURRENT, bar - 1);
-      double prevLow2 = iLow(Symbol(), PERIOD_CURRENT, bar - 2);
-      double currentLow = iLow(Symbol(), PERIOD_CURRENT, bar);
-      double nextLow1 = iLow(Symbol(), PERIOD_CURRENT, bar + 1);
-      double nextLow2 = iLow(Symbol(), PERIOD_CURRENT, bar + 2);
-      if(currentLow < prevLow1 && currentLow < prevLow2 &&
-         currentLow < nextLow1 && currentLow < nextLow2 &&
-         downFractalsCount < iGatorFractalsCount)
-        {
-         downFractals[downFractalsCount].bar = bar;
-         downFractals[downFractalsCount].value = currentLow;
-         downFractalsCount++;
-         if(iDebug)
-            printf("Fractal down: %.1f, at: %s, count: %d", currentLow, TimeToString(barTime, TIME_DATE | TIME_MINUTES), downFractalsCount);
-        }
-      if(upFractalsCount == iGatorFractalsCount && downFractalsCount == iGatorFractalsCount)
-         break;
-      bar++;
-     }
-   return bar;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void gatorMinMax(int bars, MinMax &values[])
-  {
-   double jaw[];
-   double teeth[];
-   double lip[];
-
-   CopyBuffer(GatorHandle, 0, 1, bars, jaw);
-   CopyBuffer(GatorHandle, 1, 1, bars, teeth);
-   CopyBuffer(GatorHandle, 2, 1, bars, lip);
-
-   ArrayReverse(jaw);
-   ArrayReverse(teeth);
-   ArrayReverse(lip);
-
-   for(int i = 0; i < bars; i++)
-     {
-      values[i].min = MathMin(MathMin(jaw[i], teeth[i]), MathMin(jaw[i], lip[i]));
-      values[i].max = MathMax(MathMax(jaw[i], teeth[i]), MathMax(jaw[i], lip[i]));
-     }
+   return false;
   }
 
 //+------------------------------------------------------------------+
@@ -377,6 +281,8 @@ void handleSignal(string signalName, double ratio)
    screenShot(signalName);
    string message;
    StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", NormalizeDouble(ratio, 3));
+   if(iDebug)
+      printf(message);
    Alert(signalName, " ", message);
   }
 
