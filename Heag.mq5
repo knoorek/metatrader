@@ -7,10 +7,8 @@
 #property link "https://www.mql5.com"
 #property version "1.0"
 
-const string expertVersion = "1.3.0";
+const string expertVersion = "1.4.0";
 
-input double iHammerMaxRatio = 0.33;
-input int iAoOneColorBars = 3;
 input bool iDebug = false;
 input bool iSignalScreenshot = true;
 
@@ -32,6 +30,9 @@ int AoHandle;
 int GatorHandle;
 int ScWidth = 1920;
 int ScHeight = 768;
+
+int TrendingBars = 5;
+double DivergenceRatio = 0.5;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -93,6 +94,7 @@ void OnTick()
       LastPeriod = lastPeriodCheck;
 
       findHammers();
+      findFioms();
      }
   }
 
@@ -114,22 +116,33 @@ void findHammers()
    double open = iOpen(Symbol(), PERIOD_CURRENT, 1);
    double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
-   if(inDownTrend(2) && isLowestLow(1, 2) &&
-      isHammerUp(high, low, open, close))
+   if(isHammerUp(high, low, open, close) && isLowestLow(1, 2) && aoOneColorDownTrend(2))
      {
-      double topWick = high - MathMax(open, close);
-      double bottomWick = MathMin(open, close) - low;
       ObjectCreate(0, "hammer_up_" + IntegerToString(GetTickCount()), OBJ_ARROW_BUY, 0, iTime(Symbol(), PERIOD_CURRENT, 1), low);
-      handleSignal("hammer_up", topWick / bottomWick);
+      handleSignal("hammer_up");
      }
 
-   if(inUpTrend(2) && isHighestHigh(1, 2) &&
-      isHammerDown(high, low, open, close))
+   if(isHammerDown(high, low, open, close) && isHighestHigh(1, 2) && aoOneColorUpTrend(2))
      {
-      double topWick = high - MathMax(open, close);
-      double bottomWick = MathMin(open, close) - low;
       ObjectCreate(0, "hammer_down_" + IntegerToString(GetTickCount()), OBJ_ARROW_SELL, 0, iTime(Symbol(), PERIOD_CURRENT, 1), high);
-      handleSignal("hammer_down", bottomWick / topWick);
+      handleSignal("hammer_down");
+     }
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void findFioms()
+  {
+   if(isFractalUp() && isMouthOpeningUp(1, 5))
+     {
+      ObjectCreate(0, "fiom_up_" + IntegerToString(GetTickCount()), OBJ_ARROW_BUY, 0, iTime(Symbol(), PERIOD_CURRENT, 3), iHigh(Symbol(), PERIOD_CURRENT, 3));
+      handleSignal("fiom_up");
+     }
+   if(isFractalDown() && isMouthOpeningDown(1, 5))
+     {
+      ObjectCreate(0, "fiom_down_" + IntegerToString(GetTickCount()), OBJ_ARROW_SELL, 0, iTime(Symbol(), PERIOD_CURRENT, 3), iLow(Symbol(), PERIOD_CURRENT, 3));
+      handleSignal("fiom_down");
      }
   }
 
@@ -138,17 +151,14 @@ void findHammers()
 //+------------------------------------------------------------------+
 bool isHammerUp(double high, double low, double open, double close)
   {
-   if(high - close > close - low)
-      return false;
-   if(iHammerMaxRatio == -1.0)
-      return true;
-   double topWick = high - MathMax(open, close);
-   double bottomWick = MathMin(open, close) - low;
+   double hMinusC = high - close;
+   double cMinusL = close - low;
+   double ratio = hMinusC / cMinusL;
 
-   if(bottomWick > 0 && topWick / bottomWick < iHammerMaxRatio)
+   if(ratio < DivergenceRatio)
      {
       if(iDebug)
-         printf("Top wick: %f, bottom wick: %f, ratio: %f", topWick, bottomWick, topWick / bottomWick);
+         printf("high-close / close-low ratio %f", ratio);
       return true;
      }
    return false;
@@ -159,36 +169,17 @@ bool isHammerUp(double high, double low, double open, double close)
 //+------------------------------------------------------------------+
 bool isHammerDown(double high, double low, double open, double close)
   {
-   if(high - close < close - low)
-      return false;
-   if(iHammerMaxRatio == -1.0)
-      return true;
-   double topWick = high - MathMax(open, close);
-   double bottomWick = MathMin(open, close) - low;
+   double cMinusL = close - low;
+   double hMinusC = high - close;
+   double ratio = cMinusL / hMinusC;
 
-   if(topWick > 0 && bottomWick / topWick < iHammerMaxRatio)
+   if(ratio < DivergenceRatio)
      {
       if(iDebug)
-         printf("Top wick: %f, bottom wick: %f, ratio: %f", topWick, bottomWick, bottomWick / topWick);
+         printf("close-low / high-close ratio %f", ratio);
       return true;
      }
    return false;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool inUpTrend(int shift)
-  {
-   return aoOneColorUpTrend(shift);
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool inDownTrend(int shift)
-  {
-   return aoOneColorDownTrend(shift);
   }
 
 //+------------------------------------------------------------------+
@@ -232,18 +223,18 @@ bool isLowestLow(int currentBar, int barsBack)
 //+------------------------------------------------------------------+
 bool aoOneColorUpTrend(int shift)
   {
-   if(iAoOneColorBars > 0)
+   if(TrendingBars > 0)
      {
       double buffer[];
-      CopyBuffer(AoHandle, 0, shift, iAoOneColorBars, buffer);
-      for(int i = 1; i < iAoOneColorBars; i++)
+      CopyBuffer(AoHandle, 0, shift, TrendingBars + 1, buffer);
+      for(int i = 1; i <= TrendingBars; i++)
         {
          if(buffer[i - 1] < 0 || buffer[i] < 0 || buffer[i - 1] >= buffer[i])
             return false;
         }
 
       if(iDebug)
-         printf("AO green for %d bars starting %d bars back", iAoOneColorBars, shift + iAoOneColorBars);
+         printf("AO green for %d bars starting %d bars back", TrendingBars, shift + TrendingBars);
       return true;
      }
 
@@ -255,18 +246,18 @@ bool aoOneColorUpTrend(int shift)
 //+------------------------------------------------------------------+
 bool aoOneColorDownTrend(int shift)
   {
-   if(iAoOneColorBars > 0)
+   if(TrendingBars > 0)
      {
       double buffer[];
-      CopyBuffer(AoHandle, 0, shift, iAoOneColorBars, buffer);
-      for(int i = 1; i < iAoOneColorBars; i++)
+      CopyBuffer(AoHandle, 0, shift, TrendingBars + 1, buffer);
+      for(int i = 1; i <= TrendingBars; i++)
         {
          if(buffer[i - 1] > 0 || buffer[i] > 0 || buffer[i - 1] <= buffer[i])
             return false;
         }
 
       if(iDebug)
-         printf("AO red for %d bars starting %d bars back", iAoOneColorBars, shift + iAoOneColorBars);
+         printf("AO red for %d bars starting %d bars back", TrendingBars, shift + TrendingBars);
       return true;
      }
 
@@ -276,11 +267,92 @@ bool aoOneColorDownTrend(int shift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void handleSignal(string signalName, double ratio)
+bool isFractalUp()
+  {
+   double high5 = iHigh(Symbol(), PERIOD_CURRENT, 5);
+   double high4 = iHigh(Symbol(), PERIOD_CURRENT, 4);
+   double high3 = iHigh(Symbol(), PERIOD_CURRENT, 3);
+   double high2 = iHigh(Symbol(), PERIOD_CURRENT, 2);
+   double high1 = iHigh(Symbol(), PERIOD_CURRENT, 1);
+
+   if(high5 < high3 && high4 < high3 && high2 < high3 && high1 < high3)
+      return true;
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isFractalDown()
+  {
+   double low5 = iLow(Symbol(), PERIOD_CURRENT, 5);
+   double low4 = iLow(Symbol(), PERIOD_CURRENT, 4);
+   double low3 = iLow(Symbol(), PERIOD_CURRENT, 3);
+   double low2 = iLow(Symbol(), PERIOD_CURRENT, 2);
+   double low1 = iLow(Symbol(), PERIOD_CURRENT, 1);
+
+   if(low5 > low3 && low4 > low3 && low2 > low3 && low1 > low3)
+      return true;
+   return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isMouthOpeningUp(int shift, int barsCount)
+  {
+   double jaw[];
+   double teeth[];
+   double lips[];
+
+   CopyBuffer(GatorHandle, 0, shift, barsCount, jaw);
+   CopyBuffer(GatorHandle, 1, shift, barsCount, teeth);
+   CopyBuffer(GatorHandle, 2, shift, barsCount, lips);
+
+   for(int i = 0; i < barsCount - 1; i++)
+     {
+      if(!(lips[i] > teeth[i] && teeth[i] > jaw[i]))
+         return false;
+      if(!(lips[i] < lips[i+1] && lips[i] - jaw[i] < lips[i+1] - jaw[i+1]))
+         return false;
+     }
+   if(iDebug)
+      printf("Mouth opening up");
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool isMouthOpeningDown(int shift, int barsCount)
+  {
+   double jaw[];
+   double teeth[];
+   double lips[];
+
+   CopyBuffer(GatorHandle, 0, shift, barsCount, jaw);
+   CopyBuffer(GatorHandle, 1, shift, barsCount, teeth);
+   CopyBuffer(GatorHandle, 2, shift, barsCount, lips);
+
+   for(int i = 0; i < barsCount - 1; i++)
+     {
+      if(!(lips[i] < teeth[i] && teeth[i] < jaw[i]))
+         return false;
+      if(!(lips[i] > lips[i+1] && jaw[i]- lips[i] < jaw[i+1] - lips[i+1]))
+         return false;
+     }
+   if(iDebug)
+      printf("Mouth opening down");
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void handleSignal(string signalName)
   {
    screenShot(signalName);
-   string message;
-   StringConcatenate(message, TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES), " ratio: ", NormalizeDouble(ratio, 3));
+   string message = TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1), TIME_DATE | TIME_MINUTES);
    if(iDebug)
       printf(message);
    Alert(signalName, " ", message);
@@ -299,9 +371,5 @@ void screenShot(string signalName)
       ChartScreenShot(0, filename, ScWidth, ScHeight);
      }
   }
-
-//+------------------------------------------------------------------+
-
-//+------------------------------------------------------------------+
 
 //+------------------------------------------------------------------+
