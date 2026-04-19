@@ -7,7 +7,7 @@
 #property link "https://www.mql5.com"
 #property version "1.0"
 
-const string expertVersion = "1.4.0";
+const string expertVersion = "1.4.1";
 
 input bool iDebug = false;
 input bool iSignalScreenshot = true;
@@ -31,7 +31,8 @@ int GatorHandle;
 int ScWidth = 1920;
 int ScHeight = 768;
 
-int TrendingBars = 5;
+int AoOneColorBars = 3;
+int AoTrendingBars = 21;
 double DivergenceRatio = 0.5;
 
 //+------------------------------------------------------------------+
@@ -116,13 +117,15 @@ void findHammers()
    double open = iOpen(Symbol(), PERIOD_CURRENT, 1);
    double close = iClose(Symbol(), PERIOD_CURRENT, 1);
 
-   if(isHammerUp(high, low, open, close) && isLowestLow(1, 2) && aoOneColorDownTrend(2))
+   if(isHammerUp(high, low, open, close) && isLowestLow(1, 2) &&
+      aoOneColorDownTrend(2, AoOneColorBars) && aoInTrend(AoTrendingBars))
      {
       ObjectCreate(0, "hammer_up_" + IntegerToString(GetTickCount()), OBJ_ARROW_BUY, 0, iTime(Symbol(), PERIOD_CURRENT, 1), low);
       handleSignal("hammer_up");
      }
 
-   if(isHammerDown(high, low, open, close) && isHighestHigh(1, 2) && aoOneColorUpTrend(2))
+   if(isHammerDown(high, low, open, close) && isHighestHigh(1, 2) &&
+      aoOneColorUpTrend(2, AoOneColorBars) && aoInTrend(AoTrendingBars))
      {
       ObjectCreate(0, "hammer_down_" + IntegerToString(GetTickCount()), OBJ_ARROW_SELL, 0, iTime(Symbol(), PERIOD_CURRENT, 1), high);
       handleSignal("hammer_down");
@@ -153,13 +156,15 @@ bool isHammerUp(double high, double low, double open, double close)
   {
    double hMinusC = high - close;
    double cMinusL = close - low;
-   double ratio = hMinusC / cMinusL;
-
-   if(ratio < DivergenceRatio)
+   if(cMinusL > 0.0)
      {
-      if(iDebug)
-         printf("high-close / close-low ratio %f", ratio);
-      return true;
+      double ratio = hMinusC / cMinusL;
+      if(ratio < DivergenceRatio)
+        {
+         if(iDebug)
+            printf("high-close / close-low ratio %f", ratio);
+         return true;
+        }
      }
    return false;
   }
@@ -171,13 +176,15 @@ bool isHammerDown(double high, double low, double open, double close)
   {
    double cMinusL = close - low;
    double hMinusC = high - close;
-   double ratio = cMinusL / hMinusC;
-
-   if(ratio < DivergenceRatio)
+   if(hMinusC > 0.0)
      {
-      if(iDebug)
-         printf("close-low / high-close ratio %f", ratio);
-      return true;
+      double ratio = cMinusL / hMinusC;
+      if(ratio < DivergenceRatio)
+        {
+         if(iDebug)
+            printf("close-low / high-close ratio %f", ratio);
+         return true;
+        }
      }
    return false;
   }
@@ -221,20 +228,20 @@ bool isLowestLow(int currentBar, int barsBack)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool aoOneColorUpTrend(int shift)
+bool aoOneColorUpTrend(int shift, int barsCount)
   {
-   if(TrendingBars > 0)
+   if(barsCount > 0)
      {
       double buffer[];
-      CopyBuffer(AoHandle, 0, shift, TrendingBars + 1, buffer);
-      for(int i = 1; i <= TrendingBars; i++)
+      CopyBuffer(AoHandle, 0, shift, barsCount + 1, buffer);
+      for(int i = 1; i <= barsCount; i++)
         {
          if(buffer[i - 1] < 0 || buffer[i] < 0 || buffer[i - 1] >= buffer[i])
             return false;
         }
 
       if(iDebug)
-         printf("AO green for %d bars starting %d bars back", TrendingBars, shift + TrendingBars);
+         printf("AO green for %d bars starting %d bars back", barsCount, shift + barsCount);
       return true;
      }
 
@@ -244,24 +251,47 @@ bool aoOneColorUpTrend(int shift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool aoOneColorDownTrend(int shift)
+bool aoOneColorDownTrend(int shift, int barsCount)
   {
-   if(TrendingBars > 0)
+   if(barsCount > 0)
      {
       double buffer[];
-      CopyBuffer(AoHandle, 0, shift, TrendingBars + 1, buffer);
-      for(int i = 1; i <= TrendingBars; i++)
+      CopyBuffer(AoHandle, 0, shift, barsCount + 1, buffer);
+      for(int i = 1; i <= barsCount; i++)
         {
          if(buffer[i - 1] > 0 || buffer[i] > 0 || buffer[i - 1] <= buffer[i])
             return false;
         }
 
       if(iDebug)
-         printf("AO red for %d bars starting %d bars back", TrendingBars, shift + TrendingBars);
+         printf("AO red for %d bars starting %d bars back", barsCount, shift + barsCount);
       return true;
      }
 
    return false;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool aoInTrend(int barsCount)
+  {
+   double ao[];
+   CopyBuffer(AoHandle, 0, 1, barsCount, ao);
+   int positiveAo = 0;
+   int negativeAo = 0;
+   for(int i = 0; i < barsCount; i++)
+     {
+      if(ao[i] < 0)
+         negativeAo++;
+      if(ao[i] > 0)
+         positiveAo++;
+     }
+   if(positiveAo > 0 && negativeAo > 0)
+     {
+      return false;
+     }
+   return true;
   }
 
 //+------------------------------------------------------------------+
