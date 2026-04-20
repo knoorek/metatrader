@@ -7,7 +7,7 @@
 #property link "https://www.mql5.com"
 #property version "1.0"
 
-const string expertVersion = "1.4.1";
+const string expertVersion = "1.4.2";
 
 input bool iDebug = false;
 input bool iSignalScreenshot = true;
@@ -40,7 +40,6 @@ double DivergenceRatio = 0.5;
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   ObjectsDeleteAll(0, 0);
    AoHandle = iAO(Symbol(), PERIOD_CURRENT);
    if(AoHandle == INVALID_HANDLE)
      {
@@ -139,12 +138,12 @@ void findFioms()
   {
    if(isFractalUp() && isMouthOpeningUp(1, 5))
      {
-      ObjectCreate(0, "fiom_up_" + IntegerToString(GetTickCount()), OBJ_ARROW_BUY, 0, iTime(Symbol(), PERIOD_CURRENT, 3), iHigh(Symbol(), PERIOD_CURRENT, 3));
+      ObjectCreate(0, "fiom_up_" + IntegerToString(GetTickCount()), OBJ_ARROW_BUY, 0, iTime(Symbol(), PERIOD_CURRENT, 3), iLow(Symbol(), PERIOD_CURRENT, 3));
       handleSignal("fiom_up");
      }
    if(isFractalDown() && isMouthOpeningDown(1, 5))
      {
-      ObjectCreate(0, "fiom_down_" + IntegerToString(GetTickCount()), OBJ_ARROW_SELL, 0, iTime(Symbol(), PERIOD_CURRENT, 3), iLow(Symbol(), PERIOD_CURRENT, 3));
+      ObjectCreate(0, "fiom_down_" + IntegerToString(GetTickCount()), OBJ_ARROW_SELL, 0, iTime(Symbol(), PERIOD_CURRENT, 3), iHigh(Symbol(), PERIOD_CURRENT, 3));
       handleSignal("fiom_down");
      }
   }
@@ -396,8 +395,13 @@ void screenShot(string signalName)
    if(iSignalScreenshot)
      {
       string filename;
-      StringConcatenate(filename, Symbol(), "_", EnumToString(Period()), "_", signalName, "_", IntegerToString(GetTickCount()), ".gif");
-      StringToUpper(filename);
+      string dateTime = TimeToString(iTime(Symbol(), PERIOD_CURRENT, 1));
+      StringReplace(dateTime, ".", "");
+      StringReplace(dateTime, ":", "");
+      StringReplace(dateTime, " ", "");
+      string asset = Symbol();
+      StringReplace(asset, ".pro", "");
+      StringConcatenate(filename, asset, "_", EnumToString(Period()), "_", signalName, "_", dateTime, ".gif");
       ChartScreenShot(0, filename, ScWidth, ScHeight);
      }
   }
