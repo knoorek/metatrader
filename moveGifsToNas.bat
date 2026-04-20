@@ -3,9 +3,11 @@ set "WATCH_DIR=c:\Users\kpach\AppData\Roaming\MetaQuotes\Terminal\47AEB69EDDAD4D
 set "TARGET_DIR=\\DS1525\common\public\forex"
 set "NTFY_URL=http://ntfy.sh/..."
 set "FILE_NAME=signals.txt"
+set "ALL_SIGNALS_FILE=all_signals.txt"
 
 :petla
 dir /b /a-d "%WATCH_DIR%\*.gif" > %FILE_NAME%
+dir /b /a-d "%WATCH_DIR%\*.gif" >> %ALL_SIGNALS_FILE%
 for %%A in ("%FILE_NAME%") do (
     if %%~zA GTR 0 (
         echo [%time%] Moving files...
