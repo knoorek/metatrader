@@ -39,7 +39,6 @@ const int LipsPeriod  = 5;
 const int LipsShift   = 3;
 
 //--- alert behavior - fixed (no sounds)
-const bool UseAlertPopup = true;
 const bool UsePrintLog   = true;
 
 //--- trading parameters - fixed
@@ -71,6 +70,7 @@ void SaveSignalScreenshot(const string tag, const datetime barTime)
    if(!TakeScreenshots)
       return;
 
+   ChartRedraw(ChartID());
    MqlDateTime dt;
    TimeToStruct(barTime, dt);
 
@@ -927,10 +927,10 @@ void OnTick()
                          dir, _Symbol, EnumToString(Period()),
                          TimeToString(barTime, TIME_DATE|TIME_SECONDS));
 
-      SaveSignalScreenshot("Divergent_" + dir, barTime);
       DrawDivergentArrow(dbSignal, barTime);
       DrawRegressionLineForDivergent(barTime, CLOSE, clrOrange);
       DrawRegressionLineForDivergent(barTime, TEETH, clrDarkOrange);
+      SaveSignalScreenshot("Divergent_" + dir, barTime);
       PlaceOrderForDivergent(dbSignal);
      }
 
@@ -943,8 +943,8 @@ void OnTick()
                TimeToString(iTime(_Symbol, PERIOD_CURRENT, g_upFractShift), TIME_DATE|TIME_SECONDS)
             );
 
-      SaveSignalScreenshot("UpFractal_FirstAboveJaw", barTime);
       DrawFractalArrow(true, g_upFractShift);
+      SaveSignalScreenshot("UpFractal_FirstAboveJaw", barTime);
      }
 
 // 3) Down fractal signal (only if no other message this bar)
@@ -956,8 +956,8 @@ void OnTick()
                TimeToString(iTime(_Symbol, PERIOD_CURRENT, g_downFractShift), TIME_DATE|TIME_SECONDS)
             );
 
-      SaveSignalScreenshot("DownFractal_FirstBelowJaw", barTime);
       DrawFractalArrow(false, g_downFractShift);
+      SaveSignalScreenshot("DownFractal_FirstBelowJaw", barTime);
      }
 
 // unified print/alert
@@ -965,8 +965,6 @@ void OnTick()
      {
       if(UsePrintLog)
          Print(msg);
-      if(UseAlertPopup)
-         Alert(msg);
      }
 
    lastBarTime = barTime;
