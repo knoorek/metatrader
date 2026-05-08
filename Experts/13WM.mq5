@@ -7,9 +7,9 @@
 //+------------------------------------------------------------------+
 #property strict
 
-input int AliTrend   = 21;    // Min Alligator open mouth bars
-input int LRLength   = 13;    // Linear regression bars
-input double LRRatio = 1.5;   // Min CLOSE LR / JAW LR
+input int AliTrend   = 21;    // Min Alligator open mouth bars for Super Hammer
+input int LRLength   = 13;    // Linear regression bars for Divergent Bar
+input double LRRatio = 1.5;   // Linear regression angulation ratio
 input bool TakeScreenshots = true;
 
 enum Peak
@@ -27,8 +27,7 @@ enum RegressionLine
 
 //--- fixed angulation settings
 const double   Lots        = 0.10;
-const int      LR_Length   = LRLength;   // bars for linear regression
-const int      SL          = 10;         // StopLoss pips
+const int      LR_Length   = LRLength;   // bars for linear regression         // StopLoss pips
 
 //--- Alligator parameters (classic Bill Williams) - fixed
 const int JawPeriod   = 13;
@@ -37,6 +36,10 @@ const int TeethPeriod = 8;
 const int TeethShift  = 5;
 const int LipsPeriod  = 5;
 const int LipsShift   = 3;
+
+//--- Super hammer parameters
+const double maxWickSize = 0.33;
+const double maxBodySize = 0.2;
 
 //--- alert behavior - fixed (no sounds)
 const bool UsePrintLog   = true;
@@ -233,7 +236,7 @@ bool IsDownFractal(const int shift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-double getRegressionY(const int shift, const RegressionLine regLine)
+double GetRegressionY(const int shift, const RegressionLine regLine)
   {
    if(regLine == JAW)
       return GetAlligator(shift, 0);
@@ -260,7 +263,7 @@ double LinearRegressionSlope(const int shift, const int len, const RegressionLin
      {
       int barIndex = shift + len - 1 - i;
       double x = (double)i;
-      double y = getRegressionY(barIndex, regLine);
+      double y = GetRegressionY(barIndex, regLine);
 
       sumX  += x;
       sumY  += y;
@@ -297,7 +300,7 @@ bool GetRegressionLinePoints(const int shift,
      {
       int barIndex = shift + len - 1 - i; // i=0 oldest
       double x = (double)i;
-      double y = getRegressionY(barIndex, regLine);
+      double y = GetRegressionY(barIndex, regLine);
 
       sumX  += x;
       sumY  += y;
@@ -458,12 +461,15 @@ bool LastDownFractalIsFirstBelowJaw(const int fromShift, int &fractShift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool HasAlligatorTrend(const int shift, const bool bullish)
+int HasAlligatorTrend(const int shift, const bool bullish)
   {
    if(alligatorHandle == INVALID_HANDLE)
       return false;
    if(AliTrend == 0)
-      return true;
+      if(bullish)
+         return -1;
+      else
+         return 1;
 
    double jaw[];
    double teeth[];
@@ -489,10 +495,14 @@ bool HasAlligatorTrend(const int shift, const bool bullish)
         }
      }
    if(bullish && mouthOpenUp > 0)
-      return false;
+      return 0;
    if(!bullish && mouthOpenDown > 0)
-      return false;
-   return true;
+      return 0;
+   if(mouthOpenUp)
+      return 1;
+   if(mouthOpenDown)
+      return -1;
+   return 0;
   }
 
 //+------------------------------------------------------------------+
@@ -513,9 +523,36 @@ bool IsBullishDivergentBar(const int shift)
       return false;
    if(!AlligatorJawFilter(shift, true))
       return false;
-   if(!HasAlligatorTrend(shift, true))
-      return false;
    if(!HasAngulation(shift))
+      return false;
+
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool IsBullishSuperHammerBar(const int shift)
+  {
+   if(shift + 1 >= Bars(_Symbol, PERIOD_CURRENT))
+      return false;
+
+   double curLow   = iLow(_Symbol, PERIOD_CURRENT, shift);
+   double curHigh  = iHigh(_Symbol, PERIOD_CURRENT, shift);
+   double curOpen  = iOpen(_Symbol, PERIOD_CURRENT, shift);
+   double curClose = iClose(_Symbol, PERIOD_CURRENT, shift);
+   double prevLow  = iLow(_Symbol, PERIOD_CURRENT, shift + 1);
+   double wick     = curHigh - curClose;
+   double body     = MathAbs(curClose - curOpen);
+   double barSize  = curHigh - curLow;
+
+   if(!(prevLow > curLow))
+      return false;
+   if(!(wick / barSize <= maxWickSize && body / barSize <= maxBodySize))
+      return false;
+   if(!AlligatorJawFilter(shift, true))
+      return false;
+   if(!(HasAlligatorTrend(shift, true) == -1))
       return false;
 
    return true;
@@ -539,9 +576,36 @@ bool IsBearishDivergentBar(const int shift)
       return false;
    if(!AlligatorJawFilter(shift, false))
       return false;
-   if(!HasAlligatorTrend(shift, false))
-      return false;
    if(!HasAngulation(shift))
+      return false;
+
+   return true;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool IsBearishSuperHammerBar(const int shift)
+  {
+   if(shift + 1 >= Bars(_Symbol, PERIOD_CURRENT))
+      return false;
+
+   double curLow   = iLow(_Symbol, PERIOD_CURRENT, shift);
+   double curHigh  = iHigh(_Symbol, PERIOD_CURRENT, shift);
+   double curOpen  = iOpen(_Symbol, PERIOD_CURRENT, shift);
+   double curClose = iClose(_Symbol, PERIOD_CURRENT, shift);
+   double prevHigh = iHigh(_Symbol, PERIOD_CURRENT, shift + 1);
+   double wick     = curClose - curLow;
+   double body     = MathAbs(curClose - curOpen);
+   double barSize  = curHigh - curLow;
+
+   if(!(prevHigh < curHigh))
+      return false;
+   if(!(wick / barSize <= maxWickSize && body / barSize <= maxBodySize))
+      return false;
+   if(!AlligatorJawFilter(shift, false))
+      return false;
+   if(!(HasAlligatorTrend(shift, false) == 1))
       return false;
 
    return true;
@@ -555,6 +619,18 @@ int DivergentBarSignal(const int shift)
    if(IsBullishDivergentBar(shift))
       return  1;
    if(IsBearishDivergentBar(shift))
+      return -1;
+   return 0;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int SuperHammerSignal(const int shift)
+  {
+   if(IsBullishSuperHammerBar(shift))
+      return  1;
+   if(IsBearishSuperHammerBar(shift))
       return -1;
    return 0;
   }
@@ -723,7 +799,7 @@ void ManageTrailingStops(double jaw0)
 //+------------------------------------------------------------------+
 //| Place pending order for divergent bar                            |
 //+------------------------------------------------------------------+
-void PlaceOrderForDivergent(const int dbSignal)
+void PlaceOrderForDivergent(const int dbSignal, int tpPips)
   {
    double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
@@ -741,10 +817,9 @@ void PlaceOrderForDivergent(const int dbSignal)
    req.symbol    = _Symbol;
    req.magic     = MagicNumber;
    req.deviation = Slippage;
-   req.tp        = 0.0;       // no take profit
    req.volume    = Lots;
 
-   double entryPrice, sl;
+   double entryPrice, sl, tp = 0.0;
 
    if(dbSignal == 1) // BULLISH → BUY_STOP
      {
@@ -757,6 +832,9 @@ void PlaceOrderForDivergent(const int dbSignal)
       if(entryPrice <= ask)
          entryPrice = ask + point;
 
+      if(tpPips > 0)
+         tp = entryPrice + tpPips * point;
+
       if(stopLevelPoints > 0)
         {
          double minDist = stopLevelPoints * point;
@@ -764,7 +842,7 @@ void PlaceOrderForDivergent(const int dbSignal)
             entryPrice = ask + minDist;
         }
 
-      sl = iLow(_Symbol, PERIOD_CURRENT, 1) - SL * point;
+      sl = iLow(_Symbol, PERIOD_CURRENT, 1);
       if(sl >= entryPrice)
          sl = entryPrice - 2 * point;
 
@@ -787,6 +865,9 @@ void PlaceOrderForDivergent(const int dbSignal)
          if(entryPrice >= bid)
             entryPrice = bid - point;
 
+         if(tpPips > 0)
+            tp = entryPrice - tpPips * point;
+
          if(stopLevelPoints > 0)
            {
             double minDist = stopLevelPoints * point;
@@ -794,7 +875,7 @@ void PlaceOrderForDivergent(const int dbSignal)
                entryPrice = bid - minDist;
            }
 
-         sl = iHigh(_Symbol, PERIOD_CURRENT, 1) + SL * point;
+         sl = iHigh(_Symbol, PERIOD_CURRENT, 1);
          if(sl <= entryPrice)
             sl = entryPrice + 2 * point;
 
@@ -810,6 +891,7 @@ void PlaceOrderForDivergent(const int dbSignal)
 
    req.price = NormalizeDouble(entryPrice, digits);
    req.sl    = NormalizeDouble(sl, digits);
+   req.tp    = NormalizeDouble(tp, digits);
 
    SendTradeRequest(req, "PlacePending");
   }
@@ -817,11 +899,11 @@ void PlaceOrderForDivergent(const int dbSignal)
 //+------------------------------------------------------------------+
 //| Draw divergent bar arrow objects                                 |
 //+------------------------------------------------------------------+
-void DrawDivergentArrow(const int dbSignal, const datetime barTime)
+void DrawDivergentArrow(string tag, const int dbSignal, const datetime barTime)
   {
    string dirTag = (dbSignal == 1 ? "BUY" : "SELL");
-   string objName = StringFormat("DB_%s_%s_%I64d",
-                                 dirTag, _Symbol, (long)barTime);
+   string objName = StringFormat("%s_%s_%s_%I64d",
+                                 tag, dirTag, _Symbol, (long)barTime);
 
    ENUM_OBJECT type = (dbSignal == 1 ? OBJ_ARROW_BUY : OBJ_ARROW_SELL);
    double price = (dbSignal == 1 ? iHigh(_Symbol, PERIOD_CURRENT, 1) : iLow(_Symbol, PERIOD_CURRENT, 1));
@@ -912,57 +994,69 @@ void OnTick()
    if(barTime == lastBarTime)
       return; // no new bar
 
-   string msg = "";
-
 // --- per-bar: recompute fractal trail conditions (used both for trail + alerts) ---
    g_buyTrailCondition  = LastUpFractalIsFirstAboveJaw(1, g_upFractShift);
    g_sellTrailCondition = LastDownFractalIsFirstBelowJaw(1, g_downFractShift);
+   int superHammer = SuperHammerSignal(1);
 
 // 1) Divergent bar signal (and orders)
    int dbSignal = DivergentBarSignal(1);
    if(dbSignal != 0)
      {
       string dir = (dbSignal == 1 ? "BULLISH" : "BEARISH");
-      msg = StringFormat("Divergent bar (%s) on %s %s at bar time %s",
-                         dir, _Symbol, EnumToString(Period()),
-                         TimeToString(barTime, TIME_DATE|TIME_SECONDS));
+      string msg = StringFormat("Divergent bar (%s) on %s %s at bar time %s",
+                                dir, _Symbol, EnumToString(Period()),
+                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
 
-      DrawDivergentArrow(dbSignal, barTime);
+      DrawDivergentArrow("DB", dbSignal, barTime);
       DrawRegressionLineForDivergent(barTime, CLOSE, clrOrange);
       DrawRegressionLineForDivergent(barTime, TEETH, clrDarkOrange);
       SaveSignalScreenshot("Divergent_" + dir, barTime);
-      PlaceOrderForDivergent(dbSignal);
+      PlaceOrderForDivergent(dbSignal, 0);
+      if(UsePrintLog)
+         Print(msg);
      }
 
-// 2) Up fractal signal (only if no divergent message this bar)
-   if(msg == "" && g_buyTrailCondition && g_upFractShift >= 0)
+// 1a) Super hammer
+   if(superHammer != 0)
      {
-      msg = StringFormat(
-               "UP FRACTAL: last up fractal is FIRST above Jaw on %s %s (fractal bar time %s)",
-               _Symbol, EnumToString(Period()),
-               TimeToString(iTime(_Symbol, PERIOD_CURRENT, g_upFractShift), TIME_DATE|TIME_SECONDS)
-            );
+      string dir = (superHammer == 1 ? "BULLISH" : "BEARISH");
+      string msg = StringFormat("Super hammer bar (%s) on %s %s at bar time %s",
+                                dir, _Symbol, EnumToString(Period()),
+                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
+
+      DrawDivergentArrow("SH", superHammer, barTime);
+      SaveSignalScreenshot("Super_Hammer_" + dir, barTime);
+      if(UsePrintLog)
+         Print(msg);
+     }
+
+// 3) Up fractal signal (only if no divergent message this bar)
+   if(g_buyTrailCondition && g_upFractShift >= 0)
+     {
+      string msg = StringFormat(
+                      "UP FRACTAL: last up fractal is FIRST above Jaw on %s %s (fractal bar time %s)",
+                      _Symbol, EnumToString(Period()),
+                      TimeToString(iTime(_Symbol, PERIOD_CURRENT, g_upFractShift), TIME_DATE|TIME_SECONDS)
+                   );
 
       DrawFractalArrow(true, g_upFractShift);
       SaveSignalScreenshot("UpFractal_FirstAboveJaw", barTime);
+      if(UsePrintLog)
+         Print(msg);
      }
 
 // 3) Down fractal signal (only if no other message this bar)
-   if(msg == "" && g_sellTrailCondition && g_downFractShift >= 0)
+   if(g_sellTrailCondition && g_downFractShift >= 0)
      {
-      msg = StringFormat(
-               "DOWN FRACTAL: last down fractal is FIRST below Jaw on %s %s (fractal bar time %s)",
-               _Symbol, EnumToString(Period()),
-               TimeToString(iTime(_Symbol, PERIOD_CURRENT, g_downFractShift), TIME_DATE|TIME_SECONDS)
-            );
+      string msg = StringFormat(
+                      "DOWN FRACTAL: last down fractal is FIRST below Jaw on %s %s (fractal bar time %s)",
+                      _Symbol, EnumToString(Period()),
+                      TimeToString(iTime(_Symbol, PERIOD_CURRENT, g_downFractShift), TIME_DATE|TIME_SECONDS)
+                   );
 
       DrawFractalArrow(false, g_downFractShift);
       SaveSignalScreenshot("DownFractal_FirstBelowJaw", barTime);
-     }
-
-// unified print/alert
-   if(msg != "")
-     {
       if(UsePrintLog)
          Print(msg);
      }
@@ -970,4 +1064,4 @@ void OnTick()
    lastBarTime = barTime;
   }
 //+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
+
