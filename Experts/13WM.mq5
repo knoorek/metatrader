@@ -80,10 +80,13 @@ void SaveSignalScreenshot(const string tag, const datetime barTime)
    string timePart = StringFormat("%04d%02d%02d_%02d%02d%02d",
                                   dt.year, dt.mon, dt.day,
                                   dt.hour, dt.min, dt.sec);
-
+   string asset = Symbol();
+   StringReplace(asset, ".pro", "");
+   string period = EnumToString(Period());
+   StringReplace(period, "PERIOD_", "");
    string fileName = StringFormat("%s_%s_%s_%s.gif",
-                                  _Symbol,
-                                  EnumToString(Period()),
+                                  asset,
+                                  period,
                                   tag,
                                   timePart);
 // saved in MQL5\Files\
@@ -1003,7 +1006,7 @@ void OnTick()
    int dbSignal = DivergentBarSignal(1);
    if(dbSignal != 0)
      {
-      string dir = (dbSignal == 1 ? "BULLISH" : "BEARISH");
+      string dir = (dbSignal == 1 ? "UP" : "DOWN");
       string msg = StringFormat("Divergent bar (%s) on %s %s at bar time %s",
                                 dir, _Symbol, EnumToString(Period()),
                                 TimeToString(barTime, TIME_DATE|TIME_SECONDS));
@@ -1011,7 +1014,7 @@ void OnTick()
       DrawDivergentArrow("DB", dbSignal, barTime);
       DrawRegressionLineForDivergent(barTime, CLOSE, clrOrange);
       DrawRegressionLineForDivergent(barTime, TEETH, clrDarkOrange);
-      SaveSignalScreenshot("Divergent_" + dir, barTime);
+      SaveSignalScreenshot("DB_" + dir, barTime);
       PlaceOrderForDivergent(dbSignal, 0);
       if(UsePrintLog)
          Print(msg);
@@ -1020,13 +1023,13 @@ void OnTick()
 // 1a) Super hammer
    if(superHammer != 0)
      {
-      string dir = (superHammer == 1 ? "BULLISH" : "BEARISH");
+      string dir = (superHammer == 1 ? "UP" : "DOWN");
       string msg = StringFormat("Super hammer bar (%s) on %s %s at bar time %s",
                                 dir, _Symbol, EnumToString(Period()),
                                 TimeToString(barTime, TIME_DATE|TIME_SECONDS));
 
       DrawDivergentArrow("SH", superHammer, barTime);
-      SaveSignalScreenshot("Super_Hammer_" + dir, barTime);
+      SaveSignalScreenshot("SH_" + dir, barTime);
       if(UsePrintLog)
          Print(msg);
      }
@@ -1041,7 +1044,7 @@ void OnTick()
                    );
 
       DrawFractalArrow(true, g_upFractShift);
-      SaveSignalScreenshot("UpFractal_FirstAboveJaw", barTime);
+      SaveSignalScreenshot("FAJ", barTime);
       if(UsePrintLog)
          Print(msg);
      }
@@ -1056,7 +1059,7 @@ void OnTick()
                    );
 
       DrawFractalArrow(false, g_downFractShift);
-      SaveSignalScreenshot("DownFractal_FirstBelowJaw", barTime);
+      SaveSignalScreenshot("FBJ", barTime);
       if(UsePrintLog)
          Print(msg);
      }
@@ -1065,3 +1068,4 @@ void OnTick()
   }
 //+------------------------------------------------------------------+
 
+//+------------------------------------------------------------------+
