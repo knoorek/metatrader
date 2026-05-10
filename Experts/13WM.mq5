@@ -1015,7 +1015,7 @@ void OnTick()
       DrawRegressionLineForDivergent(barTime, CLOSE, clrOrange);
       DrawRegressionLineForDivergent(barTime, TEETH, clrDarkOrange);
       SaveSignalScreenshot("DB_" + dir, barTime);
-      PlaceOrderForDivergent(dbSignal, 0);
+      //PlaceOrderForDivergent(dbSignal, 0);
       if(UsePrintLog)
          Print(msg);
      }
