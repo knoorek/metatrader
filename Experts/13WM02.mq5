@@ -1,11 +1,18 @@
 //+------------------------------------------------------------------+
-//|                                                     13WM_new.mq5 |
+//|                                                     13WM02.mq5   |
 //|                                  Copyright 2023, MetaQuotes Ltd. |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
+#include <Trade\Trade.mqh>
+#include <Controls\Button.mqh>
+
 #property copyright "Copyright 2023, MetaQuotes Ltd."
 #property link      "https://www.mql5.com"
 #property version   "1.00"
+
+#define BTN_BUY_NAME "Btn Buy"
+#define BTN_SELL_NAME "Btn Sell"
+#define BTN_CLOSE_NAME "Btn Close"
 
 enum AlligatorFilter
   {
@@ -36,6 +43,7 @@ input bool DB2 = true;  //report two divergent bars
 input bool SH = true;   //report super hammer
 input bool JF = true;   //report first fractal above/below jaw
 input bool OMF = true;  //report first fractal above/below open mouth
+input bool MTB = false; //add manual trading buttons (strategy testing)
 
 //--- Alligator parameters (classic Bill Williams) - fixed
 const int JawPeriod   = 13;
@@ -66,6 +74,11 @@ datetime LastFBJBarDateTime;
 datetime LastFAOMBarDateTime;
 datetime LastFBOMJBarDateTime;
 
+CButton btnBuy;
+CButton btnSell;
+CButton btnClose;
+CTrade trade;
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -95,6 +108,24 @@ int OnInit()
       Alert("Failed to create AO handle");
       return(INIT_FAILED);
      }
+   if(MTB)
+     {
+      btnBuy.Create(0, BTN_BUY_NAME, 0, 50, 50, 200, 80);
+      btnBuy.Text("Buy");
+      btnBuy.Color(clrWhite);
+      btnBuy.ColorBackground(clrGreen);
+
+      btnSell.Create(0, BTN_SELL_NAME, 0, 50, 81, 200, 111);
+      btnSell.Text("Sell");
+      btnSell.Color(clrWhite);
+      btnSell.ColorBackground(clrRed);
+
+      btnClose.Create(0, BTN_CLOSE_NAME, 0, 50, 112, 200, 142);
+      btnClose.Text("Close");
+      btnClose.Color(clrWhite);
+      btnClose.ColorBackground(clrBlack);
+     }
+
    return(INIT_SUCCEEDED);
   }
 
@@ -109,6 +140,12 @@ void OnDeinit(const int reason)
       IndicatorRelease(FractHandle);
    if(AoHandle != INVALID_HANDLE)
       IndicatorRelease(AoHandle);
+   if(MTB)
+     {
+      btnBuy.Destroy(reason);
+      btnSell.Destroy(reason);
+      btnClose.Destroy(reason);
+     }
   }
 
 //+------------------------------------------------------------------+
@@ -116,6 +153,29 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
+   if(btnBuy.Pressed())
+     {
+      Print("BUY pressed...");
+      trade.Buy(0.1);
+      btnBuy.Pressed(false);
+     }
+   if(btnSell.Pressed())
+     {
+      Print("SELL pressed...");
+      trade.Sell(0.1);
+      btnSell.Pressed(false);
+     }
+   if(btnClose.Pressed())
+     {
+      Print("CLOSE pressed...");
+      for(int i = 0; i < PositionsTotal(); i++)
+        {
+         ulong ticket = PositionGetTicket(i);
+         trade.PositionClose(ticket);
+        }
+      btnClose.Pressed(false);
+     }
+     
    datetime barTime = iTime(_Symbol, PERIOD_CURRENT, 1);
    if(barTime == LastBarTime)
       return;
