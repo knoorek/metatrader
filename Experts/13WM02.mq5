@@ -13,6 +13,7 @@
 #define BTN_BUY_NAME "Btn Buy"
 #define BTN_SELL_NAME "Btn Sell"
 #define BTN_CLOSE_NAME "Btn Close"
+#define LBL_SIGNALS_COUNT "Lbl Signals Count"
 
 enum AlligatorFilter
   {
@@ -32,10 +33,18 @@ enum Peak
    MAX
   };
 
-enum SingalDirection
+enum SignalType
   {
-   SIGNAL_UP,
-   SIGNAL_DOWN
+   DB_UP,
+   DB_DOWN,
+   SH_UP,
+   SH_DOWN,
+   DB2_UP,
+   DB2_DOWN,
+   FJ_UP,
+   FJ_DOWN,
+   FOM_UP,
+   FOM_DOWN
   };
 
 input bool DB = true;   //report divergent bar
@@ -63,7 +72,6 @@ const int  ShotHeight = 768;
 
 int AlligatorHandle = INVALID_HANDLE;
 int FractHandle = INVALID_HANDLE;
-int AoHandle = INVALID_HANDLE;
 
 //--- last closed bar time processed
 datetime LastBarTime;
@@ -74,10 +82,13 @@ datetime LastFBJBarDateTime;
 datetime LastFAOMBarDateTime;
 datetime LastFBOMJBarDateTime;
 
-CButton btnBuy;
-CButton btnSell;
-CButton btnClose;
-CTrade trade;
+datetime InitTime;
+int SignalsCount = 0;
+
+CButton BtnBuy;
+CButton BtnSell;
+CButton BtnClose;
+CTrade Trade;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -102,28 +113,39 @@ int OnInit()
       Alert("Failed to create Fractals handle");
       return(INIT_FAILED);
      }
-   AoHandle = iAO(_Symbol, PERIOD_CURRENT);
-   if(AoHandle == INVALID_HANDLE)
-     {
-      Alert("Failed to create AO handle");
-      return(INIT_FAILED);
-     }
+
    if(MTB)
      {
-      btnBuy.Create(0, BTN_BUY_NAME, 0, 50, 50, 200, 80);
-      btnBuy.Text("Buy");
-      btnBuy.Color(clrWhite);
-      btnBuy.ColorBackground(clrGreen);
+      BtnBuy.Create(0, BTN_BUY_NAME, 0, 50, 50, 200, 80);
+      BtnBuy.Text("Buy");
+      BtnBuy.Color(clrWhite);
+      BtnBuy.ColorBackground(clrGreen);
 
-      btnSell.Create(0, BTN_SELL_NAME, 0, 50, 81, 200, 111);
-      btnSell.Text("Sell");
-      btnSell.Color(clrWhite);
-      btnSell.ColorBackground(clrRed);
+      BtnSell.Create(0, BTN_SELL_NAME, 0, 50, 81, 200, 111);
+      BtnSell.Text("Sell");
+      BtnSell.Color(clrWhite);
+      BtnSell.ColorBackground(clrRed);
 
-      btnClose.Create(0, BTN_CLOSE_NAME, 0, 50, 112, 200, 142);
-      btnClose.Text("Close");
-      btnClose.Color(clrWhite);
-      btnClose.ColorBackground(clrBlack);
+      BtnClose.Create(0, BTN_CLOSE_NAME, 0, 50, 112, 200, 142);
+      BtnClose.Text("Close");
+      BtnClose.Color(clrWhite);
+      BtnClose.ColorBackground(clrBlack);
+     }
+
+   InitTime = TimeCurrent();
+   if(ObjectCreate(ChartID(), LBL_SIGNALS_COUNT, OBJ_LABEL, 0, 0, 0))
+     {
+      ObjectSetInteger(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_CORNER, CORNER_LEFT_LOWER);
+      ObjectSetInteger(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_ANCHOR, ANCHOR_LEFT);
+      ObjectSetInteger(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_XDISTANCE, 30);
+      ObjectSetInteger(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_YDISTANCE, 30);
+      ObjectSetInteger(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_COLOR, clrBlack);
+      ObjectSetString(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_FONT, "Verdana");
+      ObjectSetInteger(ChartID(), LBL_SIGNALS_COUNT, OBJPROP_FONTSIZE, 8);
+     }
+   else
+     {
+      Print("Failed to create initTime object");
      }
 
    return(INIT_SUCCEEDED);
@@ -138,13 +160,11 @@ void OnDeinit(const int reason)
       IndicatorRelease(AlligatorHandle);
    if(FractHandle != INVALID_HANDLE)
       IndicatorRelease(FractHandle);
-   if(AoHandle != INVALID_HANDLE)
-      IndicatorRelease(AoHandle);
    if(MTB)
      {
-      btnBuy.Destroy(reason);
-      btnSell.Destroy(reason);
-      btnClose.Destroy(reason);
+      BtnBuy.Destroy(reason);
+      BtnSell.Destroy(reason);
+      BtnClose.Destroy(reason);
      }
   }
 
@@ -153,146 +173,63 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
   {
-   if(btnBuy.Pressed())
-     {
-      Print("BUY pressed...");
-      trade.Buy(0.1);
-      btnBuy.Pressed(false);
-     }
-   if(btnSell.Pressed())
-     {
-      Print("SELL pressed...");
-      trade.Sell(0.1);
-      btnSell.Pressed(false);
-     }
-   if(btnClose.Pressed())
-     {
-      Print("CLOSE pressed...");
-      for(int i = 0; i < PositionsTotal(); i++)
-        {
-         ulong ticket = PositionGetTicket(i);
-         trade.PositionClose(ticket);
-        }
-      btnClose.Pressed(false);
-     }
-     
+   handleButtons();
+
    datetime barTime = iTime(_Symbol, PERIOD_CURRENT, 1);
    if(barTime == LastBarTime)
       return;
 
    if(DB && isDivergentBarUp(1))
-     {
-      string msg = StringFormat("Divergent bar up (%s) on %s %s at bar time %s",
-                                EnumToString(SIGNAL_UP), _Symbol, EnumToString(Period()),
-                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-
-      drawDivergentArrow("DB", SIGNAL_UP, barTime);
-      saveSignalScreenshot("DB_UP", barTime);
-      Print(msg);
-     }
+      handleSignal(DB_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
    if(DB && isDivergentBarDown(1))
-     {
-      string msg = StringFormat("Divergent bar down (%s) on %s %s at bar time %s",
-                                EnumToString(SIGNAL_DOWN), _Symbol, EnumToString(Period()),
-                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-
-      drawDivergentArrow("DB", SIGNAL_DOWN, barTime);
-      saveSignalScreenshot("DB_DOWN", barTime);
-      Print(msg);
-     }
-
+      handleSignal(DB_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
    if(DB2 && isTwoBarDivergenceUp(1))
-     {
-      string msg = StringFormat("Two divergent bars up (%s) on %s %s at bar time %s",
-                                EnumToString(SIGNAL_UP), _Symbol, EnumToString(Period()),
-                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-
-      drawDivergentArrow("2DB", SIGNAL_UP, barTime);
-      saveSignalScreenshot("2DB_UP", barTime);
-      Print(msg);
-     }
+      handleSignal(DB2_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
    if(DB2 && isTwoBarDivergenceDown(1))
-     {
-      string msg = StringFormat("Two divergent bars down (%s) on %s %s at bar time %s",
-                                EnumToString(SIGNAL_DOWN), _Symbol, EnumToString(Period()),
-                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-
-      drawDivergentArrow("2DB", SIGNAL_DOWN, barTime);
-      saveSignalScreenshot("2DB_DOWN", barTime);
-      Print(msg);
-     }
-
+      handleSignal(DB2_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
    if(SH && isSuperHammerUp(1))
-     {
-      string msg = StringFormat("Super hammer bar up (%s) on %s %s at bar time %s",
-                                EnumToString(SIGNAL_UP), _Symbol, EnumToString(Period()),
-                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-
-      drawDivergentArrow("SH", SIGNAL_UP, barTime);
-      saveSignalScreenshot("SH_UP", barTime);
-      Print(msg);
-     }
+      handleSignal(SH_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
    if(SH && isSuperHammerDown(1))
-     {
-      string msg = StringFormat("Super hammer bar up (%s) on %s %s at bar time %s",
-                                EnumToString(SIGNAL_DOWN), _Symbol, EnumToString(Period()),
-                                TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-
-      drawDivergentArrow("SH", SIGNAL_DOWN, barTime);
-      saveSignalScreenshot("SH_DOWN", barTime);
-      Print(msg);
-     }
-   int fractalBarShift = 3;
-   if(JF && isFirstFractalAboveJaw(1))
-     {
-      string msg = StringFormat(
-                      "UP FRACTAL: last up fractal is FIRST above Jaw on %s %s (fractal bar time %s)",
-                      _Symbol, EnumToString(Period()),
-                      TimeToString(iTime(_Symbol, PERIOD_CURRENT, fractalBarShift), TIME_DATE|TIME_SECONDS)
-                   );
-
-      drawFractalArrow(SIGNAL_UP, fractalBarShift, iLow(_Symbol, PERIOD_CURRENT, fractalBarShift));
-      saveSignalScreenshot("JF_UP", barTime);
-      Print(msg);
-     }
+      handleSignal(SH_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
+   if(JF && isFirstFractalAboveJaw(3))
+      handleSignal(FJ_UP, LastFAJBarDateTime);
    if(JF && isFirstFractalBelowJaw(1))
-     {
-      string msg = StringFormat(
-                      "DOWN FRACTAL: last down fractal is FIRST below Jaw on %s %s (fractal bar time %s)",
-                      _Symbol, EnumToString(Period()),
-                      TimeToString(iTime(_Symbol, PERIOD_CURRENT, fractalBarShift), TIME_DATE|TIME_SECONDS)
-                   );
-
-      drawFractalArrow(SIGNAL_DOWN, fractalBarShift, iHigh(_Symbol, PERIOD_CURRENT, fractalBarShift));
-      saveSignalScreenshot("JF_DOWN", barTime);
-      Print(msg);
-     }
-
-   if(OMF && isFirstFractalAboveMouth(1))
-     {
-      string msg = StringFormat(
-                      "UP FRACTAL: last up fractal is FIRST above Open Mouth on %s %s (fractal bar time %s)",
-                      _Symbol, EnumToString(Period()),
-                      TimeToString(iTime(_Symbol, PERIOD_CURRENT, fractalBarShift), TIME_DATE|TIME_SECONDS)
-                   );
-      drawFractalArrow(SIGNAL_UP, fractalBarShift, iHigh(_Symbol, PERIOD_CURRENT, fractalBarShift));
-      saveSignalScreenshot("OMF_UP", barTime);
-      Print(msg);
-     }
-   if(OMF && isFirstFractalBelowMouth(1))
-     {
-      string msg = StringFormat(
-                      "DOWN FRACTAL: last down fractal is FIRST below Open Mouth on %s %s (fractal bar time %s)",
-                      _Symbol, EnumToString(Period()),
-                      TimeToString(iTime(_Symbol, PERIOD_CURRENT, fractalBarShift), TIME_DATE|TIME_SECONDS)
-                   );
-
-      drawFractalArrow(SIGNAL_DOWN, fractalBarShift, iLow(_Symbol, PERIOD_CURRENT, fractalBarShift));
-      saveSignalScreenshot("OMF_DOWN", barTime);
-      Print(msg);
-     }
+      handleSignal(FJ_DOWN, LastFBJBarDateTime);
+   if(OMF && isFirstFractalAboveMouth(3))
+      handleSignal(FOM_UP, LastFAOMBarDateTime);
+   if(OMF && isFirstFractalBelowMouth(3))
+      handleSignal(FOM_DOWN, LastFBOMJBarDateTime);
 
    LastBarTime = barTime;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void handleButtons()
+  {
+   if(BtnBuy.Pressed())
+     {
+      Print("BUY pressed...");
+      Trade.Buy(0.1);
+      BtnBuy.Pressed(false);
+     }
+   if(BtnSell.Pressed())
+     {
+      Print("SELL pressed...");
+      Trade.Sell(0.1);
+      BtnSell.Pressed(false);
+     }
+   if(BtnClose.Pressed())
+     {
+      Print("CLOSE pressed...");
+      for(int i = 0; i < PositionsTotal(); i++)
+        {
+         ulong ticket = PositionGetTicket(i);
+         Trade.PositionClose(ticket);
+        }
+      BtnClose.Pressed(false);
+     }
   }
 
 //+------------------------------------------------------------------+
@@ -726,7 +663,7 @@ double getAlligatorMinMax(const int shift, Peak peak)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool isAlligatorMouthOpen(const int shift, AlligatorMouth am)
+bool isAlligatorMouthOpen(int shift, AlligatorMouth am)
   {
    if(AlligatorHandle == INVALID_HANDLE)
       return false;
@@ -749,9 +686,74 @@ bool isAlligatorMouthOpen(const int shift, AlligatorMouth am)
   }
 
 //+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void handleSignal(SignalType sig, datetime barTime)
+  {
+   int shift = -1;
+   for(int i = 1; i <= Bars(_Symbol, PERIOD_CURRENT); i++)
+      if(barTime == iTime(_Symbol, PERIOD_CURRENT, i))
+        {
+         shift = i;
+         break;
+        }
+   if(shift == -1)
+     {
+      Print("Illegal state, bar for barTime not found");
+      return;
+     }
+     
+   string msg = StringFormat("%s on: %s %s at: %s",
+                             EnumToString(sig),
+                             _Symbol,
+                             EnumToString(Period()),
+                             TimeToString(barTime, TIME_DATE|TIME_SECONDS));
+   if(isFractalSignal(sig))
+      drawArrow(sig, shift);
+   else
+      drawArrow(sig, shift);
+   saveSignalScreenshot(sig, barTime);
+
+   SignalsCount++;
+   ObjectSetString(ChartID(),
+                   LBL_SIGNALS_COUNT,
+                   OBJPROP_TEXT,
+                   StringFormat("Signals from %s: %s",
+                                TimeToString(InitTime, TIME_DATE|TIME_SECONDS),
+                                IntegerToString(SignalsCount)));
+   Print(msg);
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void drawArrow(SignalType sig, int shift)
+  {
+   datetime barTime = iTime(_Symbol, PERIOD_CURRENT, shift);
+   string objName = StringFormat("%s_%I64d", EnumToString(sig), (long)barTime);
+
+   ENUM_OBJECT type = (isUpSignal(sig) ? OBJ_ARROW_BUY : OBJ_ARROW_SELL);
+   double price = (isUpSignal(sig) ?
+                   iLow(_Symbol, PERIOD_CURRENT, shift) - _Point :
+                   iHigh(_Symbol, PERIOD_CURRENT, shift) + _Point);
+
+   if(ObjectFind(ChartID(), objName) != -1)
+      ObjectDelete(ChartID(), objName);
+
+   if(!ObjectCreate(ChartID(), objName, type, 0, barTime, price))
+     {
+      Print("Failed to create arrow object: ", objName);
+      return;
+     }
+
+   ObjectSetInteger(ChartID(), objName, OBJPROP_COLOR,
+                    (isUpSignal(sig) ? clrGreen : clrRed));
+  }
+
+//+------------------------------------------------------------------+
 //| Helper: save chart screenshot                                    |
 //+------------------------------------------------------------------+
-void saveSignalScreenshot(string tag, datetime barTime)
+void saveSignalScreenshot(SignalType sig, datetime barTime)
   {
    ChartRedraw(ChartID());
    MqlDateTime dt;
@@ -767,7 +769,7 @@ void saveSignalScreenshot(string tag, datetime barTime)
    string fileName = StringFormat("%s_%s_%s_%s.gif",
                                   asset,
                                   period,
-                                  tag,
+                                  EnumToString(sig),
                                   timePart);
 // saved in MQL5\Files\
    if(!ChartScreenShot(ChartID(), fileName, ShotWidth, ShotHeight))
@@ -775,56 +777,25 @@ void saveSignalScreenshot(string tag, datetime barTime)
   }
 
 //+------------------------------------------------------------------+
-//| Draw divergent bar arrow objects                                 |
+//|                                                                  |
 //+------------------------------------------------------------------+
-void drawDivergentArrow(string tag, SingalDirection dir, datetime barTime)
+bool isUpSignal(SignalType sig)
   {
-   string dirTag = (dir == SIGNAL_UP ? "BUY" : "SELL");
-   string objName = StringFormat("%s_%s_%s_%I64d",
-                                 tag, dirTag, _Symbol, (long)barTime);
-
-   ENUM_OBJECT type = (dir == SIGNAL_UP ? OBJ_ARROW_BUY : OBJ_ARROW_SELL);
-   int arrowShift = 250;
-   double price = (dir == SIGNAL_UP ?
-                   iLow(_Symbol, PERIOD_CURRENT, 1) - _Point * arrowShift :
-                   iHigh(_Symbol, PERIOD_CURRENT, 1) + _Point * arrowShift);
-
-   if(ObjectFind(ChartID(), objName) != -1)
-      ObjectDelete(ChartID(), objName);
-
-   if(!ObjectCreate(ChartID(), objName, type, 0, barTime, price))
-     {
-      Print("Failed to create divergent arrow object: ", objName);
-      return;
-     }
-
-   ObjectSetInteger(ChartID(), objName, OBJPROP_COLOR,
-                    (dir == SIGNAL_UP ? clrGreen : clrRed));
+   return sig == DB_UP ||
+          sig == DB2_UP ||
+          sig == SH_UP ||
+          sig == FJ_UP ||
+          sig == FOM_UP;
   }
 
 //+------------------------------------------------------------------+
-//| Draw fractal arrows                                              |
+//|                                                                  |
 //+------------------------------------------------------------------+
-void drawFractalArrow(SingalDirection dir, int shift, double price)
+bool isFractalSignal(SignalType sig)
   {
-   datetime t = iTime(_Symbol, PERIOD_CURRENT, shift);
-   string dirTag = (dir == SIGNAL_UP ? "UpFractal" : "DownFractal");
-   string objName = StringFormat("FR_%s_%s_%I64d",
-                                 dirTag, _Symbol, (long)t);
-
-   ENUM_OBJECT type = (dir == SIGNAL_UP ? OBJ_ARROW_BUY : OBJ_ARROW_SELL);
-
-   if(ObjectFind(ChartID(), objName) != -1)
-      ObjectDelete(ChartID(), objName);
-
-   if(!ObjectCreate(ChartID(), objName, type, 0, t, price))
-     {
-      Print("Failed to create fractal arrow object: ", objName);
-      return;
-     }
-
-   ObjectSetInteger(ChartID(), objName, OBJPROP_COLOR,
-                    (dir == SIGNAL_UP ? clrGreen : clrRed));
+   return sig == FJ_UP ||
+          sig == FJ_DOWN ||
+          sig == FOM_UP ||
+          sig == FOM_DOWN;
   }
-
 //+------------------------------------------------------------------+
