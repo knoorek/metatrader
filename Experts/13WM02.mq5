@@ -702,7 +702,7 @@ void handleSignal(SignalType sig, datetime barTime)
       Print("Illegal state, bar for barTime not found");
       return;
      }
-     
+
    string msg = StringFormat("%s on: %s %s at: %s",
                              EnumToString(sig),
                              _Symbol,
@@ -712,7 +712,6 @@ void handleSignal(SignalType sig, datetime barTime)
       drawArrow(sig, shift);
    else
       drawArrow(sig, shift);
-   saveSignalScreenshot(sig, barTime);
 
    SignalsCount++;
    ObjectSetString(ChartID(),
@@ -721,6 +720,7 @@ void handleSignal(SignalType sig, datetime barTime)
                    StringFormat("Signals from %s: %s",
                                 TimeToString(InitTime, TIME_DATE|TIME_SECONDS),
                                 IntegerToString(SignalsCount)));
+   saveSignalScreenshot(sig, barTime);
    Print(msg);
   }
 
