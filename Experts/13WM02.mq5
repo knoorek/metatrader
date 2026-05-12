@@ -690,29 +690,12 @@ bool isAlligatorMouthOpen(int shift, AlligatorMouth am)
 //+------------------------------------------------------------------+
 void handleSignal(SignalType sig, datetime barTime)
   {
-   int shift = -1;
-   for(int i = 1; i <= Bars(_Symbol, PERIOD_CURRENT); i++)
-      if(barTime == iTime(_Symbol, PERIOD_CURRENT, i))
-        {
-         shift = i;
-         break;
-        }
-   if(shift == -1)
-     {
-      Print("Illegal state, bar for barTime not found");
-      return;
-     }
-
    string msg = StringFormat("%s on: %s %s at: %s",
                              EnumToString(sig),
                              _Symbol,
                              EnumToString(Period()),
                              TimeToString(barTime, TIME_DATE|TIME_SECONDS));
-   if(isFractalSignal(sig))
-      drawArrow(sig, shift);
-   else
-      drawArrow(sig, shift);
-
+   drawArrow(sig, barTime);
    SignalsCount++;
    ObjectSetString(ChartID(),
                    LBL_SIGNALS_COUNT,
@@ -727,19 +710,18 @@ void handleSignal(SignalType sig, datetime barTime)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-void drawArrow(SignalType sig, int shift)
+void drawArrow(SignalType sig, datetime barTime)
   {
-   datetime barTime = iTime(_Symbol, PERIOD_CURRENT, shift);
-   string objName = StringFormat("%s_%I64d", EnumToString(sig), (long)barTime);
-
-   ENUM_OBJECT type = (isUpSignal(sig) ? OBJ_ARROW_BUY : OBJ_ARROW_SELL);
+   int shift = barFromTime(barTime);
    double price = (isUpSignal(sig) ?
                    iLow(_Symbol, PERIOD_CURRENT, shift) - _Point :
                    iHigh(_Symbol, PERIOD_CURRENT, shift) + _Point);
 
+   string objName = StringFormat("%s_%I64d", EnumToString(sig), (long)barTime);
    if(ObjectFind(ChartID(), objName) != -1)
       ObjectDelete(ChartID(), objName);
 
+   ENUM_OBJECT type = (isUpSignal(sig) ? OBJ_ARROW_BUY : OBJ_ARROW_SELL);
    if(!ObjectCreate(ChartID(), objName, type, 0, barTime, price))
      {
       Print("Failed to create arrow object: ", objName);
@@ -779,6 +761,23 @@ void saveSignalScreenshot(SignalType sig, datetime barTime)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
+int barFromTime(datetime barTime)
+  {
+   int shift = -1;
+   for(int i = 1; i <= Bars(_Symbol, PERIOD_CURRENT); i++)
+      if(barTime == iTime(_Symbol, PERIOD_CURRENT, i))
+        {
+         shift = i;
+         break;
+        }
+   if(shift == -1)
+      Print("Illegal state, bar for barTime not found");
+   return shift;
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool isUpSignal(SignalType sig)
   {
    return sig == DB_UP ||
@@ -786,16 +785,5 @@ bool isUpSignal(SignalType sig)
           sig == SH_UP ||
           sig == FJ_UP ||
           sig == FOM_UP;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool isFractalSignal(SignalType sig)
-  {
-   return sig == FJ_UP ||
-          sig == FJ_DOWN ||
-          sig == FOM_UP ||
-          sig == FOM_DOWN;
   }
 //+------------------------------------------------------------------+
