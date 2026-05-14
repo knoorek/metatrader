@@ -179,18 +179,24 @@ void OnTick()
    if(barTime == LastBarTime)
       return;
 
-   if(DB && isDivergentBarUp(1))
-      handleSignal(DB_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
-   if(DB && isDivergentBarDown(1))
-      handleSignal(DB_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
-   if(DB2 && isTwoBarDivergenceUp(1))
-      handleSignal(DB2_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
-   if(DB2 && isTwoBarDivergenceDown(1))
-      handleSignal(DB2_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
    if(SH && isSuperHammerUp(1))
       handleSignal(SH_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
+   else
+      if(DB && isDivergentBarUp(1))
+         handleSignal(DB_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
+      else
+         if(DB2 && isTwoBarDivergenceUp(1))
+            handleSignal(DB2_UP, iTime(_Symbol, PERIOD_CURRENT, 1));
+
    if(SH && isSuperHammerDown(1))
       handleSignal(SH_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
+   else
+      if(DB && isDivergentBarDown(1))
+         handleSignal(DB_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
+      else
+         if(DB2 && isTwoBarDivergenceDown(1))
+            handleSignal(DB2_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
+
    if(JF && isFirstFractalAboveJaw(3))
       handleSignal(FJ_UP, LastFAJBarDateTime);
    if(JF && isFirstFractalBelowJaw(1))
@@ -248,7 +254,7 @@ bool isDivergentBarUp(int shift)
 
    if(!(curLow < prevLow && curClose > mid))
       return false;
-   if(!filterWithAlligator(shift, BELOW_ALLIGATOR))
+   if(!filterWithAlligator(shift, BELOW_ALLIGATOR, curHigh))
       return false;
    return true;
   }
@@ -269,7 +275,7 @@ bool isDivergentBarDown(int shift)
 
    if(!(curHigh > prevHigh && curClose < mid))
       return false;
-   if(!filterWithAlligator(shift, ABOVE_ALLIGATOR))
+   if(!filterWithAlligator(shift, ABOVE_ALLIGATOR, curLow))
       return false;
    return true;
   }
@@ -296,7 +302,7 @@ bool isTwoBarDivergenceUp(int shift)
       return false;
    if(!(curClose > curOpen))
       return false;
-   if(!filterWithAlligator(shift, BELOW_ALLIGATOR))
+   if(!filterWithAlligator(shift, BELOW_ALLIGATOR, twoBarsHigh))
       return false;
    return true;
   }
@@ -323,7 +329,7 @@ bool isTwoBarDivergenceDown(int shift)
       return false;
    if(!(curClose < curOpen))
       return false;
-   if(!filterWithAlligator(shift, ABOVE_ALLIGATOR))
+   if(!filterWithAlligator(shift, ABOVE_ALLIGATOR, twoBarsLow))
       return false;
    return true;
   }
@@ -351,7 +357,7 @@ bool isSuperHammerUp(int shift)
       return false;
    if(!(body / barSize <= MaxBodySize))
       return false;
-   if(!filterWithAlligator(shift, BELOW_ALLIGATOR))
+   if(!filterWithAlligator(shift, BELOW_ALLIGATOR, curHigh))
       return false;
    return true;
   }
@@ -379,7 +385,7 @@ bool isSuperHammerDown(int shift)
       return false;
    if(!(body / barSize <= MaxBodySize))
       return false;
-   if(!filterWithAlligator(shift, ABOVE_ALLIGATOR))
+   if(!filterWithAlligator(shift, ABOVE_ALLIGATOR, curLow))
       return false;
    return true;
   }
@@ -611,17 +617,15 @@ bool IsDownFractal(const int shift)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool filterWithAlligator(int shift, AlligatorFilter af)
+bool filterWithAlligator(int shift, AlligatorFilter af, double price)
   {
-   double close = iClose(_Symbol, PERIOD_CURRENT, shift);
-
    if(af == BELOW_ALLIGATOR)
      {
       double jawCur = getAlligatorMinMax(shift, MIN);
       double jawPrev = getAlligatorMinMax(shift + 1, MIN);
       if(jawCur == 0.0 || jawPrev == 0.0)
          return false;
-      return (close < jawCur && jawCur < jawPrev);
+      return (price < jawCur && jawCur < jawPrev);
      }
    if(af == ABOVE_ALLIGATOR)
      {
@@ -629,7 +633,7 @@ bool filterWithAlligator(int shift, AlligatorFilter af)
       double jawPrev = getAlligatorMinMax(shift + 1, MAX);
       if(jawCur == 0.0 || jawPrev == 0.0)
          return false;
-      return (close > jawCur && jawCur > jawPrev);
+      return (price > jawCur && jawCur > jawPrev);
      }
    Alert("Unhandled AlligatorFilter value!");
    return false;
@@ -696,7 +700,7 @@ void handleSignal(SignalType sig, datetime barTime)
                              EnumToString(Period()),
                              TimeToString(barTime, TIME_DATE|TIME_SECONDS));
    drawArrow(sig, barTime);
-   SignalsCount++;
+   ++SignalsCount;
    ObjectSetString(ChartID(),
                    LBL_SIGNALS_COUNT,
                    OBJPROP_TEXT,
