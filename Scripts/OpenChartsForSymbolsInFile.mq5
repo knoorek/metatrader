@@ -8,8 +8,9 @@
 #property version   "1.00"
 #property script_show_inputs
 
-//--- parametry skryptu
-input string FileName = "open_charts_symbols.txt"; // Nazwa pliku z symbolami
+input string FileName = "open_charts_symbols.txt";    //File with symbols
+input ENUM_TIMEFRAMES timeFrame = PERIOD_D1;          //Chart period
+input string templateName = "13WM.tpl";               //Template to apply
 
 //+------------------------------------------------------------------+
 //| Script program start function                                    |
@@ -21,6 +22,7 @@ void OnStart()
    if(file_handle != INVALID_HANDLE)
      {
       int opened_count = 0;
+      int templates_count = 0;
       while(!FileIsEnding(file_handle))
         {
          string symbol = FileReadString(file_handle);
@@ -28,17 +30,18 @@ void OnStart()
          StringTrimRight(symbol);
          if(symbol != "")
            {
-            long chart_d1 = ChartOpen(symbol, PERIOD_D1);
-            long chart_h4 = ChartOpen(symbol, PERIOD_H4);
+            long chartID = ChartOpen(symbol, timeFrame);
+            if(ChartApplyTemplate(chartID, templateName))
+               templates_count++;
 
-            if(chart_d1 > 0 && chart_h4 > 0)
-               opened_count += 2;
+            if(chartID > 0)
+               opened_count++;
             else
                Print("Error opening charts for: ", symbol);
            }
         }
       FileClose(file_handle);
-      Alert("Opened charts: ", opened_count);
+      Alert("Opened charts: ", opened_count, " template applied: ", templates_count);
      }
    else
      {
