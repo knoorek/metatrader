@@ -31,13 +31,15 @@ void OnStart()
          if(symbol != "")
            {
             long chartID = ChartOpen(symbol, timeFrame);
+            if(chartID == 0)
+               Print("Error opening chart: ", GetLastError());
             if(ChartApplyTemplate(chartID, templateName))
                templates_count++;
+            else
+               Print("Error applying template: ", GetLastError());
 
             if(chartID > 0)
                opened_count++;
-            else
-               Print("Error opening charts for: ", symbol);
            }
         }
       FileClose(file_handle);

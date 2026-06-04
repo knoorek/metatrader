@@ -9,6 +9,7 @@
 #property script_show_inputs
 //--- input parameters
 input string   templateName="13WM.tpl";
+input ENUM_TIMEFRAMES chartTimeFrame = PERIOD_D1;
 //+------------------------------------------------------------------+
 //| Script program start function                                    |
 //+------------------------------------------------------------------+
@@ -19,7 +20,8 @@ void OnStart()
    long chartID = ChartFirst();
    while(chartID >= 0)
      {
-      // Nałóż szablon na bieżący chartID w pętli
+      if(ChartPeriod(chartID) != chartTimeFrame)
+         continue;
       if(ChartApplyTemplate(chartID, templateName))
         {
          appliedCount++;
