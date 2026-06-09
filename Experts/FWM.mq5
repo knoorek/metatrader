@@ -40,18 +40,12 @@ enum SignalType
    SH_UP,
    SH_DOWN,
    DB2_UP,
-   DB2_DOWN,
-   FJ_UP,
-   FJ_DOWN,
-   FOM_UP,
-   FOM_DOWN
+   DB2_DOWN
   };
 
 input bool DB = true;   //report divergent bar
 input bool DB2 = true;  //report two divergent bars
 input bool SH = true;   //report super hammer
-input bool JF = true;   //report first fractal above/below jaw
-input bool OMF = true;  //report first fractal above/below open mouth
 input bool MTB = false; //add manual trading buttons (strategy testing)
 
 //--- Alligator parameters (classic Bill Williams) - fixed
@@ -72,15 +66,10 @@ const int  ShotHeight = 768;
 
 int AlligatorHandle = INVALID_HANDLE;
 int FractHandle = INVALID_HANDLE;
+int AoHandle = INVALID_HANDLE;
 
 //--- last closed bar time processed
 datetime LastBarTime;
-//--- fractal above/below jaw
-datetime LastFAJBarDateTime;
-datetime LastFBJBarDateTime;
-//--- fractal above/below mouth
-datetime LastFAOMBarDateTime;
-datetime LastFBOMJBarDateTime;
 
 datetime InitTime;
 int SignalsCount = 0;
@@ -107,12 +96,6 @@ int OnInit()
       Alert("Failed to create Alligator handle");
       return(INIT_FAILED);
      }
-   FractHandle = iFractals(_Symbol, PERIOD_CURRENT);
-   if(FractHandle == INVALID_HANDLE)
-     {
-      Alert("Failed to create Fractals handle");
-      return(INIT_FAILED);
-     }
 
    if(MTB)
      {
@@ -130,6 +113,19 @@ int OnInit()
       BtnClose.Text("Close");
       BtnClose.Color(clrWhite);
       BtnClose.ColorBackground(clrBlack);
+
+      FractHandle = iFractals(_Symbol, PERIOD_CURRENT);
+      if(FractHandle == INVALID_HANDLE)
+        {
+         Alert("Failed to create Fractals handle");
+         return(INIT_FAILED);
+        }
+      AoHandle = iAO(_Symbol, PERIOD_CURRENT);
+      if(AoHandle == INVALID_HANDLE)
+        {
+         Alert("Failed to create AO handle");
+         return(INIT_FAILED);
+        }
      }
 
    InitTime = TimeCurrent();
@@ -158,13 +154,15 @@ void OnDeinit(const int reason)
   {
    if(AlligatorHandle != INVALID_HANDLE)
       IndicatorRelease(AlligatorHandle);
-   if(FractHandle != INVALID_HANDLE)
-      IndicatorRelease(FractHandle);
    if(MTB)
      {
       BtnBuy.Destroy(reason);
       BtnSell.Destroy(reason);
       BtnClose.Destroy(reason);
+      if(AoHandle != INVALID_HANDLE)
+         IndicatorRelease(AoHandle);
+      if(FractHandle != INVALID_HANDLE)
+         IndicatorRelease(FractHandle);
      }
   }
 
@@ -196,15 +194,6 @@ void OnTick()
       else
          if(DB2 && isTwoBarDivergenceDown(1))
             handleSignal(DB2_DOWN, iTime(_Symbol, PERIOD_CURRENT, 1));
-
-   if(JF && isFirstFractalAboveJaw(3))
-      handleSignal(FJ_UP, LastFAJBarDateTime);
-   if(JF && isFirstFractalBelowJaw(1))
-      handleSignal(FJ_DOWN, LastFBJBarDateTime);
-   if(OMF && isFirstFractalAboveMouth(3))
-      handleSignal(FOM_UP, LastFAOMBarDateTime);
-   if(OMF && isFirstFractalBelowMouth(3))
-      handleSignal(FOM_DOWN, LastFBOMJBarDateTime);
 
    LastBarTime = barTime;
   }
@@ -390,229 +379,6 @@ bool isSuperHammerDown(int shift)
    return true;
   }
 
-//+------------------------------------------------------------------+
-//| Fractal / Jaw conditions                                         |
-//+------------------------------------------------------------------+
-bool isFirstFractalAboveJaw(int shift)
-  {
-   if(FractHandle == INVALID_HANDLE || AlligatorHandle == INVALID_HANDLE)
-      return false;
-
-   int start = MathMax(shift, 3);
-   int end   = MathMin(start + 100, Bars(_Symbol, PERIOD_CURRENT) - 4); // limit search window
-
-   int f0 = -1; // most recent up fractal
-   int f1 = -1; // previous up fractal
-
-   for(int s = start; s < end; s++)
-     {
-      if(IsUpFractal(s))
-        {
-         if(f0 == -1)
-            f0 = s;
-         else
-           {
-            f1 = s;
-            break;
-           }
-        }
-     }
-   if(f0 == -1)
-      return false;
-
-   double jaw0 = getAlligatorMinMax(f0, MAX);
-   if(jaw0 == 0.0 || iHigh(_Symbol, PERIOD_CURRENT, f0) <= jaw0)
-      return false;
-
-   double jaw1 = getAlligatorMinMax(f1, MAX);
-   if(jaw1 == 0.0)
-      return false;
-
-   if(iHigh(_Symbol, PERIOD_CURRENT, f1) <= jaw1)
-     {
-      datetime lastFractalTime = iTime(_Symbol, PERIOD_CURRENT, f0);
-      if(lastFractalTime != LastFAJBarDateTime)
-        {
-         LastFAJBarDateTime = lastFractalTime;
-         return true;
-        }
-     }
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool isFirstFractalBelowJaw(const int shift)
-  {
-   if(FractHandle == INVALID_HANDLE || AlligatorHandle == INVALID_HANDLE)
-      return false;
-
-   int start = MathMax(shift, 3);
-   int end   = MathMin(start + 100, Bars(_Symbol, PERIOD_CURRENT) - 4); // limit search window
-
-   int f0 = -1; // most recent down fractal
-   int f1 = -1; // previous down fractal
-
-   for(int s = start; s < end; s++)
-     {
-      if(IsDownFractal(s))
-        {
-         if(f0 == -1)
-            f0 = s;
-         else
-           {
-            f1 = s;
-            break;
-           }
-        }
-     }
-   if(f0 == -1)
-      return false;
-
-   double jaw0 = getAlligatorMinMax(f0, MIN);
-   if(jaw0 == 0.0 || iLow(_Symbol, PERIOD_CURRENT, f0) >= jaw0)
-      return false;
-
-   double jaw1 = getAlligatorMinMax(f1, MIN);
-   if(jaw1 == 0.0)
-      return false;
-
-   if(iLow(_Symbol, PERIOD_CURRENT, f1) >= jaw1)
-     {
-      datetime lastFractalTime = iTime(_Symbol, PERIOD_CURRENT, f0);
-      if(lastFractalTime != LastFBJBarDateTime)
-        {
-         LastFBJBarDateTime = lastFractalTime;
-         return true;
-        }
-     }
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//| Fractal / Open mouth conditions                                  |
-//+------------------------------------------------------------------+
-bool isFirstFractalAboveMouth(int shift)
-  {
-   if(FractHandle == INVALID_HANDLE || AlligatorHandle == INVALID_HANDLE)
-      return false;
-
-   int start = MathMax(shift, 3);
-   int end   = MathMin(start + 100, Bars(_Symbol, PERIOD_CURRENT) - 4); // limit search window
-
-   int f0 = -1; // most recent up fractal
-   int f1 = -1; // previous up fractal
-
-   for(int s = start; s < end; s++)
-     {
-      if(IsUpFractal(s))
-        {
-         if(f0 == -1)
-            f0 = s;
-         else
-           {
-            f1 = s;
-            break;
-           }
-        }
-     }
-   if(f0 == -1)
-      return false;
-
-   double jaw0 = getAlligatorMinMax(f0, MAX);
-   if(jaw0 == 0.0 || iHigh(_Symbol, PERIOD_CURRENT, f0) <= jaw0)
-      return false;
-
-   if(!isAlligatorMouthOpen(f1, OPEN_UP) && isAlligatorMouthOpen(f0, OPEN_UP))
-     {
-      datetime lastFractalTime = iTime(_Symbol, PERIOD_CURRENT, f0);
-      if(lastFractalTime != LastFAOMBarDateTime)
-        {
-         LastFAOMBarDateTime = lastFractalTime;
-         return true;
-        }
-     }
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//| Fractal / Open mouth conditions                                  |
-//+------------------------------------------------------------------+
-bool isFirstFractalBelowMouth(int shift)
-  {
-   if(FractHandle == INVALID_HANDLE || AlligatorHandle == INVALID_HANDLE)
-      return false;
-
-   int start = MathMax(shift, 3);
-   int end   = MathMin(start + 100, Bars(_Symbol, PERIOD_CURRENT) - 4); // limit search window
-
-   int f0 = -1; // most recent up fractal
-   int f1 = -1; // previous up fractal
-
-   for(int s = start; s < end; s++)
-     {
-      if(IsUpFractal(s))
-        {
-         if(f0 == -1)
-            f0 = s;
-         else
-           {
-            f1 = s;
-            break;
-           }
-        }
-     }
-   if(f0 == -1)
-      return false;
-
-   double jaw0 = getAlligatorMinMax(f0, MAX);
-   if(jaw0 == 0.0 || iHigh(_Symbol, PERIOD_CURRENT, f0) <= jaw0)
-      return false;
-
-   if(!isAlligatorMouthOpen(f1, OPEN_DOWN) && isAlligatorMouthOpen(f0, OPEN_DOWN))
-     {
-      datetime lastFractalTime = iTime(_Symbol, PERIOD_CURRENT, f0);
-      if(lastFractalTime != LastFBOMJBarDateTime)
-        {
-         LastFBOMJBarDateTime = lastFractalTime;
-         return true;
-        }
-     }
-   return false;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool IsUpFractal(const int shift)
-  {
-   if(FractHandle == INVALID_HANDLE)
-      return false;
-   double buff[1];
-   if(CopyBuffer(FractHandle, 0, shift, 1, buff) != 1)
-     {
-      Print("ERROR: ", GetLastError());
-      return false;
-     }
-   return (buff[0] != 0.0 && buff[0] != EMPTY_VALUE);
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool IsDownFractal(const int shift)
-  {
-   if(FractHandle == INVALID_HANDLE)
-      return false;
-   double buff[1];
-   if(CopyBuffer(FractHandle, 1, shift, 1, buff) != 1)
-     {
-      Print("ERROR: ", GetLastError());
-      return false;
-     }
-   return (buff[0] != 0.0 && buff[0] != EMPTY_VALUE);
-  }
 
 //+------------------------------------------------------------------+
 //|                                                                  |
@@ -662,31 +428,6 @@ double getAlligatorMinMax(const int shift, Peak peak)
    if(peak == MAX)
       return MathMax(MathMax(jaw[0], teeth[0]), lips[0]);
    return 0.0;
-  }
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool isAlligatorMouthOpen(int shift, AlligatorMouth am)
-  {
-   if(AlligatorHandle == INVALID_HANDLE)
-      return false;
-
-   double jaw[1];
-   double teeth[1];
-   double lips[1];
-   if(CopyBuffer(AlligatorHandle, 0, shift, 1, jaw) != 1 ||
-      CopyBuffer(AlligatorHandle, 1, shift, 1, teeth) != 1 ||
-      CopyBuffer(AlligatorHandle, 2, shift, 1, lips) != 1)
-     {
-      Print("ERROR: ", GetLastError());
-      return false;
-     }
-   if(am == OPEN_UP)
-      return lips[0] > teeth[0] && teeth[0] > jaw[0];
-   if(am == OPEN_DOWN)
-      return lips[0] < teeth[0] && teeth[0] < jaw[0];
-   return false;
   }
 
 //+------------------------------------------------------------------+
@@ -786,8 +527,6 @@ bool isUpSignal(SignalType sig)
   {
    return sig == DB_UP ||
           sig == DB2_UP ||
-          sig == SH_UP ||
-          sig == FJ_UP ||
-          sig == FOM_UP;
+          sig == SH_UP;
   }
 //+------------------------------------------------------------------+

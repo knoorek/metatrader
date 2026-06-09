@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property script_show_inputs
 //--- input parameters
-input string   templateName="13WM.tpl";
+input string   templateName="FWM.tpl";
 input ENUM_TIMEFRAMES chartTimeFrame = PERIOD_D1;
 //+------------------------------------------------------------------+
 //| Script program start function                                    |
