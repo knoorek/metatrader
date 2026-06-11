@@ -23,9 +23,7 @@ void OnStart()
       if(ChartPeriod(chartID) != chartTimeFrame)
          continue;
       if(ChartApplyTemplate(chartID, templateName))
-        {
          appliedCount++;
-        }
       else
         {
          errorCount++;

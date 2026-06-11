@@ -1,6 +1,6 @@
 ﻿//+------------------------------------------------------------------+
 //|                                              CloseAllCharts.mq5  |
-//|                                  Copyright 2026, AI Assistant    |
+//|                                            Copyright 2026, Dziq  |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026"
